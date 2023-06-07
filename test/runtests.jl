@@ -1,6 +1,20 @@
 using EpithelialDynamics1D
 using Test
+using SafeTestsets
 
-@testset "EpithelialDynamics1D.jl" begin
-    # Write your tests here.
+@safetestset "Problem" begin
+    include("problem.jl")
+end
+@safetestset "Equations" begin
+    include("equations.jl")
+end
+@safetestset "Proliferation" begin
+    include("proliferation.jl")
+end
+
+@safetestset "Uniform" begin
+    include("uniform.jl")
+end
+@safetestset "Step Function" begin
+    include("step_function.jl")
 end
