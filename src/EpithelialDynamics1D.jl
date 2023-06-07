@@ -7,13 +7,9 @@ using DiffEqCallbacks
 using Random
 using StatsBase
 using ForwardDiff
-#using FiniteVolumeMethod1D
-#using MovingBoundaryProblems1D
+using FiniteVolumeMethod1D
+using MovingBoundaryProblems1D
 using DataInterpolations
-
-FVMProblem = Float64 
-MBProblem = Float64
-
 
 export CellProblem, SteadyCellProblem
 export solve
