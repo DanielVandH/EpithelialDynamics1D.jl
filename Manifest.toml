@@ -2,7 +2,7 @@
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "988beabf5ca652457b96b4cc1204bfd30126f7c9"
+project_hash = "0b411b821af94fe6fec69eb7f2940afbac57180b"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "dcfdf328328f2645531c4ddebf841228aef74130"
@@ -719,12 +719,6 @@ version = "1.10.0"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[[deps.TestEnv]]
-deps = ["Pkg"]
-git-tree-sha1 = "b5a483bcc8c9f0df569101df166601e5e699f346"
-uuid = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
-version = "1.9.3"
 
 [[deps.ThreadingUtilities]]
 deps = ["ManualMemory"]
