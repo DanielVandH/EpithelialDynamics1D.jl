@@ -15,7 +15,6 @@ const CS = EpithelialDynamics1D
     stack(x) = reduce(hcat, x)
 end
 
-
 initial_condition = [LinRange(0, 15, 16); LinRange(15, 30, 32)] |> unique!
 fig = Figure(fontsize=33)
 ax = Axis(fig[1, 1], xlabel=L"x", width=600, height=200)
@@ -39,6 +38,7 @@ fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
         damping_constant,
         initial_condition)
     sol = solve(prob, Tsit5(), saveat=10.0)
+    @test all(≈(LinRange(0, 30, 500)), get_knots(sol))
 
     fvm_prob = continuum_limit(prob, 1000)
     fvm_sol = solve(fvm_prob, TRBDF2(linsolve=KLUFactorization()), saveat=10.0)
@@ -101,6 +101,10 @@ end
         fix_right=false)
 
     sol = solve(prob, Tsit5(), saveat=50.0)
+    _knots = get_knots(sol, 700)
+    for i in eachindex(sol)
+        @test _knots[i] ≈ LinRange(sol.u[i][begin], sol.u[i][end], 700)
+    end
 
     mb_prob = continuum_limit(prob, 1000)
     mb_sol = solve(mb_prob, TRBDF2(linsolve=KLUFactorization()), saveat=50.0)

@@ -66,7 +66,7 @@ function node_densities(cell_positions::AbstractVector{T}) where {T<:Number}
 end
 
 """
-    get_knots(sol::EnsembleSolution, num_knots = 500)   
+    get_knots(sol, num_knots = 500)   
 
 Computes knots for each time, covering the extremum of the cell positions across all 
 cell simulations.
@@ -85,6 +85,12 @@ function get_knots(sol::EnsembleSolution, num_knots=500)
         end
         knots[i] = (collect ∘ LinRange)(a, b, num_knots)
     end
+    return knots
+end
+function get_knots(sol::ODESolution, num_knots=500)
+    knots = map(sol) do r
+        (collect ∘ LinRange)(r[begin], r[end], num_knots)
+    end 
     return knots
 end
 

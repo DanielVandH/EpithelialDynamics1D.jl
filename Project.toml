@@ -1,7 +1,7 @@
 name = "EpithelialDynamics1D"
 uuid = "ace8a2d7-7779-48a6-a8a4-cf6831a7e55b"
 authors = ["Daniel VandenHeuvel <danj.vandenheuvel@gmail.com>"]
-version = "1.0.1"
+version = "1.1"
 
 [deps]
 CommonSolve = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
@@ -14,6 +14,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+TestEnv = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
 
 [compat]
 CommonSolve = "0.2"
