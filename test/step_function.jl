@@ -181,7 +181,7 @@ end
     fvm_prob = continuum_limit(prob, 1000; proliferation=true)
     fvm_sol = solve(fvm_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
 
-    (; q, r, means, lowers, uppers, knots) = node_densities(sol)
+    q, r, means, lowers, uppers, knots = node_densities(sol)
     @inferred node_densities(sol)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol)
     @inferred cell_numbers(sol)
@@ -275,7 +275,7 @@ end
     mb_prob = continuum_limit(prob, 1000; proliferation=true)
     mb_sol = solve(mb_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
 
-    (; q, r, means, lowers, uppers, knots) = node_densities(sol)
+    q, r, means, lowers, uppers, knots = node_densities(sol)
     @inferred node_densities(sol)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol)
     @inferred cell_numbers(sol)

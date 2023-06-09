@@ -6,7 +6,7 @@ const CS = EpithelialDynamics1D
 
 ## Test the cell ODEs
 function _cell_odes!(dr::AbstractVector{T}, r, p, t) where {T}
-    (; α, s, fix_left, fix_right) = p
+    α, s, fix_left, fix_right = p.α, p.s, p.fix_left, p.fix_right
     if !fix_left
         dr[1] = α * (r[2] - r[1] - s)
     else
