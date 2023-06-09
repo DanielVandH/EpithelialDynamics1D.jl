@@ -72,7 +72,11 @@ Computes knots for each time, covering the extremum of the cell positions across
 cell simulations.
 """
 function get_knots(sol::EnsembleSolution, num_knots=500)
-    knots = Vector{LinRange{Float64, Int}}(undef, length(first(sol)))
+    @static if VERSION < v"1.7"
+        knots = Vector{LinRange{Float64}}(undef, length(first(sol)))
+    else
+        knots = Vector{LinRange{Float64,Int}}(undef, length(first(sol)))
+    end
     times = first(sol).t
     for i in eachindex(times)
         a = Inf
@@ -90,7 +94,7 @@ end
 function get_knots(sol::ODESolution, num_knots=500)
     knots = map(sol) do r
         LinRange(r[begin], r[end], num_knots)
-    end 
+    end
     return knots
 end
 
