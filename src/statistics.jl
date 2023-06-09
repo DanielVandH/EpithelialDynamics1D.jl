@@ -187,7 +187,11 @@ function cell_numbers(sol::EnsembleSolution; alpha=0.05)
         N_lowers[i] = quantile(n, alpha / 2)
         N_uppers[i] = quantile(n, 1 - alpha / 2)
     end
-    return (N=convert(Vector{Vector{Int}}, eachcol(N)), means=N_means, lowers=N_lowers, uppers=N_uppers)
+    @static if VERSION ≥ v"1.9"
+        return (N=convert(Vector{Vector{Int}}, eachcol(N)), means=N_means, lowers=N_lowers, uppers=N_uppers)
+    else
+        return (N=convert(Vector{Vector{Int}}, (collect ∘ eachcol)(N)), means=N_means, lowers=N_lowers, uppers=N_uppers)
+    end
 end
 
 """
