@@ -26,6 +26,7 @@ fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
 @test_reference joinpath(fig_path, "step_function_initial_condition.png") fig
 
 @testset "Fixed Boundary" begin
+    println("Starting Fixed Boundary example.")
     force_law = (δ, p) -> p.k * (p.s - δ)
     force_law_parameters = (k=10.0, s=0.2)
     final_time = 100.0
@@ -87,6 +88,7 @@ fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
 end
 
 @testset "Moving Boundary" begin
+    println("Starting Moving Boundary example.")
     force_law = (δ, p) -> p.k * (p.s - δ)
     force_law_parameters = (k=10.0, s=0.2)
     final_time = 500.0
@@ -155,6 +157,7 @@ end
 end
 
 @testset "Proliferation with a Fixed Boundary" begin
+    println("Starting Proliferation with a Fixed Boundary example.")
     force_law = (δ, p) -> p.k * (p.s - δ)
     force_law_parameters = (k=10.0, s=0.2)
     proliferation_law = (δ, p) -> max(zero(δ), p.β * p.K * (one(δ) - inv(p.K * δ)))
@@ -247,6 +250,7 @@ end
 end
 
 @testset "Proliferation with a Moving Boundary" begin
+    println("Starting Proliferation with a Moving Boundary example.")
     force_law = (δ, p) -> p.k * (p.s - δ)
     force_law_parameters = (k=10.0, s=1)
     proliferation_law = (δ, p) -> max(zero(δ), p.β * p.K * (one(δ) - inv(p.K * δ)))
