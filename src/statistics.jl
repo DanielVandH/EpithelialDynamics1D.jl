@@ -225,7 +225,11 @@ function leading_edges(sol::EnsembleSolution; alpha=0.05)
         L_lowers[i] = quantile(n, alpha / 2)
         L_uppers[i] = quantile(n, 1 - alpha / 2)
     end
-    return (L=convert(Vector{Vector{Float64}}, eachcol(L)), means=L_means, lowers=L_lowers, uppers=L_uppers)
+    @static if VERSION ≥ v"1.9"
+        return (L=convert(Vector{Vector{Float64}}, eachcol(L)), means=L_means, lowers=L_lowers, uppers=L_uppers)
+    else
+        return (L=convert(Vector{Vector{Float64}}, (collect ∘ eachcol)(L)), means=L_means, lowers=L_lowers, uppers=L_uppers)
+    end
 end
 
 """
