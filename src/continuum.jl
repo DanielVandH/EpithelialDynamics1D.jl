@@ -25,10 +25,8 @@ end
         mesh_points=copy(prob.initial_condition);
         diffusion_function=:continuum,
         diffusion_parameters=nothing,
-        diffusion_theta=nothing, 
         reaction_function=:continuum,
         reaction_parameters=nothing,
-        reaction_theta=nothing,
         proliferation=false)
 
 Constructs an `FVMProblem` from a given [`CellProblem`](@ref).
@@ -90,16 +88,12 @@ end
         mesh_points=copy(prob.initial_condition);
         diffusion_function=:continuum,
         diffusion_parameters=nothing,
-        diffusion_theta=nothing,
         reaction_function=:continuum,
         reaction_parameters=nothing,
-        reaction_theta=nothing,
         moving_boundary_function=:continuum,
         moving_boundary_parameters=nothing,
-        moving_boundary_theta=nothing,
         rhs_function = :continuum,
         rhs_parameters=nothing,
-        rhs_theta=nothing,
         proliferation=false)
 
 Constructs an `MBProblem` from a given [`CellProblem`](@ref). 
