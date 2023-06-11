@@ -183,10 +183,12 @@ end
 
     @test fvm_sol.u ≈ solve(
         FVMProblem(prob, 1000;
-            diffusion_function=EpithelialDynamics1D._continuum_diffusion_function(prob)[1],
+            diffusion_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_diffusion_function(prob)[1](u, x, t, p),
             diffusion_parameters=EpithelialDynamics1D._continuum_diffusion_function(prob)[2],
-            reaction_function=EpithelialDynamics1D._continuum_reaction_function(prob, true)[1],
+            diffusion_theta=[1.0, 2.0],
+            reaction_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_reaction_function(prob, true)[1](u, x, t, p),
             reaction_parameters=EpithelialDynamics1D._continuum_reaction_function(prob, true)[2],
+            reaction_theta=[1.0, 2.0],
             proliferation=true
         ), TRBDF2(linsolve=KLUFactorization()), saveat=0.01).u
 
@@ -286,14 +288,18 @@ end
 
     @test mb_sol.u ≈ solve(
         MBProblem(prob, 1000;
-            diffusion_function=EpithelialDynamics1D._continuum_diffusion_function(prob)[1],
+            diffusion_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_diffusion_function(prob)[1](u, x, t, p),
             diffusion_parameters=EpithelialDynamics1D._continuum_diffusion_function(prob)[2],
-            reaction_function=EpithelialDynamics1D._continuum_reaction_function(prob, true)[1],
+            diffusion_theta=[1.0, 2.0],
+            reaction_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_reaction_function(prob, true)[1](u, x, t, p),
             reaction_parameters=EpithelialDynamics1D._continuum_reaction_function(prob, true)[2],
-            moving_boundary_function=EpithelialDynamics1D._continuum_moving_boundary(EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f,
+            reaction_theta=[1.0, 2.0],
+            moving_boundary_function=(u, t, (θ, p)) -> EpithelialDynamics1D._continuum_moving_boundary(EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f(u, t, p),
             moving_boundary_parameters=EpithelialDynamics1D._continuum_moving_boundary(EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).p,
-            rhs_function=EpithelialDynamics1D._continuum_rhs(prob, EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f,
+            moving_boundary_theta=[1.0, 2.0],
+            rhs_function=(u, t, (θ, p)) -> EpithelialDynamics1D._continuum_rhs(prob, EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f(u, t, p),
             rhs_parameters=EpithelialDynamics1D._continuum_rhs(prob, EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).p,
+            rhs_theta=[1.0, 2.0],
             proliferation=true
         ), TRBDF2(linsolve=KLUFactorization()), saveat=0.01).u
 

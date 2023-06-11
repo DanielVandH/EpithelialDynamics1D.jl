@@ -25,8 +25,10 @@ end
         mesh_points=copy(prob.initial_condition);
         diffusion_function=:continuum,
         diffusion_parameters=nothing,
+        diffusion_theta=nothing, 
         reaction_function=:continuum,
         reaction_parameters=nothing,
+        reaction_theta=nothing,
         proliferation=false)
 
 Constructs an `FVMProblem` from a given [`CellProblem`](@ref).
@@ -36,8 +38,10 @@ function FiniteVolumeMethod1D.FVMProblem(
     mesh_points=copy(prob.initial_condition);
     diffusion_function=:continuum,
     diffusion_parameters=nothing,
+    diffusion_theta=nothing,
     reaction_function=:continuum,
     reaction_parameters=nothing,
+    reaction_theta=nothing,
     proliferation=false
 )
     if !prob.fix_left || prob.initial_condition[begin] ≠ 0.0
@@ -47,6 +51,18 @@ function FiniteVolumeMethod1D.FVMProblem(
         mesh_points = LinRange(prob.initial_condition[begin], prob.initial_condition[end], mesh_points)
     end
     q = _continuum_initial_condition(prob, mesh_points)
+    if !isnothing(diffusion_theta)
+        diffusion_parameters = (
+            θ=diffusion_theta,
+            p=diffusion_parameters
+        )
+    end
+    if !isnothing(reaction_theta)
+        reaction_parameters = (
+            θ=reaction_theta,
+            p=reaction_parameters,
+        )
+    end
     if diffusion_function == :continuum
         D, Dp = _continuum_diffusion_function(prob)
     else
@@ -74,27 +90,35 @@ end
         mesh_points=copy(prob.initial_condition);
         diffusion_function=:continuum,
         diffusion_parameters=nothing,
+        diffusion_theta=nothing,
         reaction_function=:continuum,
         reaction_parameters=nothing,
+        reaction_theta=nothing,
         moving_boundary_function=:continuum,
         moving_boundary_parameters=nothing,
+        moving_boundary_theta=nothing,
         rhs_function = :continuum,
         rhs_parameters=nothing,
+        rhs_theta=nothing,
         proliferation=false)
 
-Constructs an `MBProblem` from a given [`CellProblem`](@ref).
+Constructs an `MBProblem` from a given [`CellProblem`](@ref). 
 """
 function MovingBoundaryProblems1D.MBProblem(
     prob::CellProblem,
     mesh_points=copy(prob.initial_condition);
     diffusion_function=:continuum,
     diffusion_parameters=nothing,
+    diffusion_theta=nothing,
     reaction_function=:continuum,
     reaction_parameters=nothing,
+    reaction_theta=nothing,
     moving_boundary_function=:continuum,
     moving_boundary_parameters=nothing,
+    moving_boundary_theta=nothing,
     rhs_function=:continuum,
     rhs_parameters=nothing,
+    rhs_theta=nothing,
     proliferation=false
 )
     if !prob.fix_left || prob.initial_condition[begin] ≠ 0.0
@@ -104,6 +128,30 @@ function MovingBoundaryProblems1D.MBProblem(
         mesh_points = LinRange(prob.initial_condition[begin], prob.initial_condition[end], mesh_points)
     end
     q = _continuum_initial_condition(prob, mesh_points)
+    if !isnothing(diffusion_theta)
+        diffusion_parameters = (
+            θ=diffusion_theta,
+            p=diffusion_parameters
+        )
+    end
+    if !isnothing(reaction_theta)
+        reaction_parameters = (
+            θ=reaction_theta,
+            p=reaction_parameters,
+        )
+    end
+    if !isnothing(moving_boundary_theta)
+        moving_boundary_parameters = (
+            θ=moving_boundary_theta,
+            p=moving_boundary_parameters
+        )
+    end
+    if !isnothing(rhs_theta)
+        rhs_parameters = (
+            θ=rhs_theta,
+            p=rhs_parameters
+        )
+    end
     if diffusion_function == :continuum
         D, Dp = _continuum_diffusion_function(prob)
     else
