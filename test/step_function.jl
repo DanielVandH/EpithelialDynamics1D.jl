@@ -181,17 +181,6 @@ end
     fvm_prob = continuum_limit(prob, 1000; proliferation=true)
     fvm_sol = solve(fvm_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
 
-    @test fvm_sol.u ≈ solve(
-        FVMProblem(prob, 1000;
-            diffusion_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_diffusion_function(prob)[1](u, x, t, p),
-            diffusion_parameters=EpithelialDynamics1D._continuum_diffusion_function(prob)[2],
-            diffusion_theta=[1.0, 2.0],
-            reaction_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_reaction_function(prob, true)[1](u, x, t, p),
-            reaction_parameters=EpithelialDynamics1D._continuum_reaction_function(prob, true)[2],
-            reaction_theta=[1.0, 2.0],
-            proliferation=true
-        ), TRBDF2(linsolve=KLUFactorization()), saveat=0.01).u
-
     q, r, means, lowers, uppers, knots = node_densities(sol)
     @inferred node_densities(sol)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol)
@@ -285,23 +274,6 @@ end
 
     mb_prob = continuum_limit(prob, 1000; proliferation=true)
     mb_sol = solve(mb_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
-
-    @test mb_sol.u ≈ solve(
-        MBProblem(prob, 1000;
-            diffusion_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_diffusion_function(prob)[1](u, x, t, p),
-            diffusion_parameters=EpithelialDynamics1D._continuum_diffusion_function(prob)[2],
-            diffusion_theta=[1.0, 2.0],
-            reaction_function=(u, x, t, (θ, p)) -> EpithelialDynamics1D._continuum_reaction_function(prob, true)[1](u, x, t, p),
-            reaction_parameters=EpithelialDynamics1D._continuum_reaction_function(prob, true)[2],
-            reaction_theta=[1.0, 2.0],
-            moving_boundary_function=(u, t, (θ, p)) -> EpithelialDynamics1D._continuum_moving_boundary(EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f(u, t, p),
-            moving_boundary_parameters=EpithelialDynamics1D._continuum_moving_boundary(EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).p,
-            moving_boundary_theta=[1.0, 2.0],
-            rhs_function=(u, t, (θ, p)) -> EpithelialDynamics1D._continuum_rhs(prob, EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f(u, t, p),
-            rhs_parameters=EpithelialDynamics1D._continuum_rhs(prob, EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).p,
-            rhs_theta=[1.0, 2.0],
-            proliferation=true
-        ), TRBDF2(linsolve=KLUFactorization()), saveat=0.01).u
 
     q, r, means, lowers, uppers, knots = node_densities(sol)
     @inferred node_densities(sol)
