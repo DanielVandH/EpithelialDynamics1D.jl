@@ -13,6 +13,33 @@ should be considered to have proliferation, set `proliferation = true`.
 function continuum_limit(prob::CellProblem,
     mesh_points=copy(prob.initial_condition);
     proliferation=false)
+    if prob.fix_right
+        return FVMProblem(prob, mesh_points; proliferation)
+    else
+        return MBProblem(prob, mesh_points; proliferation)
+    end
+end
+
+"""
+    FVMProblem(prob::CellProblem,
+        mesh_points=copy(prob.initial_condition);
+        diffusion_function=:continuum,
+        diffusion_parameters=nothing,
+        reaction_function=:continuum,
+        reaction_parameters=nothing,
+        proliferation=false)
+
+Constructs an `FVMProblem` from a given [`CellProblem`](@ref).
+"""
+function FiniteVolumeMethod1D.FVMProblem(
+    prob::CellProblem,
+    mesh_points=copy(prob.initial_condition);
+    diffusion_function=:continuum,
+    diffusion_parameters=nothing,
+    reaction_function=:continuum,
+    reaction_parameters=nothing,
+    proliferation=false
+)
     if !prob.fix_left || prob.initial_condition[begin] ≠ 0.0
         error("The left node must be fixed to zero.")
     end
@@ -20,11 +47,95 @@ function continuum_limit(prob::CellProblem,
         mesh_points = LinRange(prob.initial_condition[begin], prob.initial_condition[end], mesh_points)
     end
     q = _continuum_initial_condition(prob, mesh_points)
-    if prob.fix_right
-        return _fvm_continuum_limit(prob, mesh_points, q, proliferation)
+    if diffusion_function == :continuum
+        D, Dp = _continuum_diffusion_function(prob)
     else
-        return _mb_continuum_limit(prob, mesh_points, q, proliferation)
+        D, Dp = diffusion_function, diffusion_parameters
     end
+    if reaction_function == :continuum
+        R, Rp = _continuum_reaction_function(prob, proliferation)
+    else
+        R, Rp = reaction_function, reaction_parameters
+    end
+    lhs = FiniteVolumeMethod1D.Neumann(0.0)
+    rhs = FiniteVolumeMethod1D.Neumann(0.0)
+    return FiniteVolumeMethod1D.FVMProblem(mesh_points, lhs, rhs;
+        diffusion_function=D,
+        diffusion_parameters=Dp,
+        reaction_function=R,
+        reaction_parameters=Rp,
+        initial_condition=q,
+        initial_time=prob.initial_time,
+        final_time=prob.final_time)
+end
+
+"""
+    MBProblem(prob::CellProblem,
+        mesh_points=copy(prob.initial_condition);
+        diffusion_function=:continuum,
+        diffusion_parameters=nothing,
+        reaction_function=:continuum,
+        reaction_parameters=nothing,
+        moving_boundary_function=:continuum,
+        moving_boundary_parameters=nothing,
+        rhs_function = :continuum,
+        rhs_parameters=nothing,
+        proliferation=false)
+
+Constructs an `MBProblem` from a given [`CellProblem`](@ref).
+"""
+function MovingBoundaryProblems1D.MBProblem(
+    prob::CellProblem,
+    mesh_points=copy(prob.initial_condition);
+    diffusion_function=:continuum,
+    diffusion_parameters=nothing,
+    reaction_function=:continuum,
+    reaction_parameters=nothing,
+    moving_boundary_function=:continuum,
+    moving_boundary_parameters=nothing,
+    rhs_function=:continuum,
+    rhs_parameters=nothing,
+    proliferation=false
+)
+    if !prob.fix_left || prob.initial_condition[begin] ≠ 0.0
+        error("The left node must be fixed to zero.")
+    end
+    if mesh_points isa Integer
+        mesh_points = LinRange(prob.initial_condition[begin], prob.initial_condition[end], mesh_points)
+    end
+    q = _continuum_initial_condition(prob, mesh_points)
+    if diffusion_function == :continuum
+        D, Dp = _continuum_diffusion_function(prob)
+    else
+        D, Dp = diffusion_function, diffusion_parameters
+    end
+    if reaction_function == :continuum
+        R, Rp = _continuum_reaction_function(prob, proliferation)
+    else
+        R, Rp = reaction_function, reaction_parameters
+    end
+    if moving_boundary_function == :continuum
+        mb = _continuum_moving_boundary(D, Dp)
+    else
+        mb = MovingBoundaryProblems1D.Robin(moving_boundary_function, moving_boundary_parameters)
+    end
+    if rhs_function == :continuum
+        rhs = _continuum_rhs(prob, D, Dp)
+    else
+        rhs = MovingBoundaryProblems1D.Neumann(rhs_function, rhs_parameters)
+    end
+    lhs = MovingBoundaryProblems1D.Neumann(0.0)
+    return MovingBoundaryProblems1D.MBProblem(
+        mesh_points ./ mesh_points[end], lhs, rhs, mb;
+        diffusion_function=D,
+        diffusion_parameters=Dp,
+        reaction_function=R,
+        reaction_parameters=Rp,
+        initial_condition=q,
+        initial_time=prob.initial_time,
+        initial_endpoint=prob.initial_condition[end],
+        final_time=prob.final_time
+    )
 end
 
 function _continuum_initial_condition(prob, mesh_points)
@@ -34,7 +145,7 @@ function _continuum_initial_condition(prob, mesh_points)
     return pde_initial_condition
 end
 
-function _continuum_diffusion_function(prob, mesh_points)
+function _continuum_diffusion_function(prob)
     F′ = let cell_prob = prob
         q -> begin
             F = cell_prob.force_law
@@ -47,7 +158,7 @@ function _continuum_diffusion_function(prob, mesh_points)
     return D, Dp
 end
 
-function _continuum_reaction_function(prob, mesh_points, proliferation)
+function _continuum_reaction_function(prob, proliferation)
     if proliferation
         G = prob.proliferation_law
         Gp = prob.proliferation_law_parameters
@@ -61,22 +172,7 @@ function _continuum_reaction_function(prob, mesh_points, proliferation)
     end
 end
 
-function _fvm_continuum_limit(prob::CellProblem, mesh_points, q, proliferation)
-    D, Dp = _continuum_diffusion_function(prob, mesh_points)
-    R, Rp = _continuum_reaction_function(prob, mesh_points, proliferation)
-    lhs = FiniteVolumeMethod1D.Neumann(0.0)
-    rhs = FiniteVolumeMethod1D.Neumann(0.0)
-    return FiniteVolumeMethod1D.FVMProblem(mesh_points, lhs, rhs;
-        diffusion_function=D,
-        diffusion_parameters=Dp,
-        reaction_function=R,
-        reaction_parameters=Rp,
-        initial_condition=q,
-        initial_time=prob.initial_time,
-        final_time=prob.final_time)
-end
-
-function _continuum_rhs(prob, mesh_points, diffusion, diffusion_parameters)
+function _continuum_rhs(prob, diffusion, diffusion_parameters)
     η = prob.damping_constant
     η⁻¹ = inv(η)
     F = prob.force_law
@@ -86,25 +182,9 @@ function _continuum_rhs(prob, mesh_points, diffusion, diffusion_parameters)
     return MovingBoundaryProblems1D.Neumann(rhs_f, rhs_p)
 end
 
-function _continuum_moving_boundary(prob, mesh_points, diffusion, diffusion_parameters)
+function _continuum_moving_boundary(diffusion, diffusion_parameters)
     mb_f = (q, t, p) -> (zero(q), -p.D(q, nothing, t, p.Dp) * inv(q))
     mb_p = (D=diffusion, Dp=diffusion_parameters)
     return MovingBoundaryProblems1D.Robin(mb_f, mb_p)
 end
 
-function _mb_continuum_limit(prob::CellProblem, mesh_points, q, proliferation)
-    D, Dp = _continuum_diffusion_function(prob, mesh_points)
-    R, Rp = _continuum_reaction_function(prob, mesh_points, proliferation)
-    lhs = MovingBoundaryProblems1D.Neumann(0.0)
-    rhs = _continuum_rhs(prob, mesh_points, D, Dp)
-    mb = _continuum_moving_boundary(prob, mesh_points, D, Dp)
-    return MovingBoundaryProblems1D.MBProblem(mesh_points ./ mesh_points[end], lhs, rhs, mb;
-        diffusion_function=D,
-        diffusion_parameters=Dp,
-        reaction_function=R,
-        reaction_parameters=Rp,
-        initial_condition=q,
-        initial_time=prob.initial_time,
-        initial_endpoint=prob.initial_condition[end],
-        final_time=prob.final_time)
-end

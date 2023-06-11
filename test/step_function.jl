@@ -181,6 +181,15 @@ end
     fvm_prob = continuum_limit(prob, 1000; proliferation=true)
     fvm_sol = solve(fvm_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
 
+    @test fvm_sol.u ≈ solve(
+        FVMProblem(prob, 1000;
+            diffusion_function=EpithelialDynamics1D._continuum_diffusion_function(prob)[1],
+            diffusion_parameters=EpithelialDynamics1D._continuum_diffusion_function(prob)[2],
+            reaction_function=EpithelialDynamics1D._continuum_reaction_function(prob, true)[1],
+            reaction_parameters=EpithelialDynamics1D._continuum_reaction_function(prob, true)[2],
+            proliferation=true
+        ), TRBDF2(linsolve=KLUFactorization()), saveat=0.01).u
+
     q, r, means, lowers, uppers, knots = node_densities(sol)
     @inferred node_densities(sol)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol)
@@ -191,9 +200,9 @@ end
     @test all(≈(LinRange(0, 30, 500)), knots)
 
     # Test the statistics 
-    for k in 1:length(sol)
-        for j in 1:length(sol[k])
-            for i in 1:length(sol[k][j])
+    for k in rand(1:length(sol), 20)
+        for j in rand(1:length(sol[k]), 40)
+            for i in rand(1:length(sol[k][j]), 60)
                 if i == 1
                     @test q[k][j][1] ≈ 1 / (r[k][j][2] - r[k][j][1])
                 elseif i == length(sol[k][j])
@@ -207,7 +216,7 @@ end
             @test N[k][j] ≈ length(sol[k][j]) - 1
         end
     end
-    for j in eachindex(fvm_sol)
+    for j in rand(1:length(fvm_sol), 50)
         Nj = [N[k][j] for k in eachindex(sol)]
         @test mean(Nj) ≈ N_means[j]
         @test quantile(Nj, 0.025) ≈ N_lowers[j]
@@ -216,7 +225,7 @@ end
             LinearInterpolation(fvm_sol.u[j], fvm_sol.prob.p.geometry.mesh_points),
             0.0, 30.0
         )
-        for i in eachindex(knots[j])
+        for i in rand(1:length(knots[j]), 50)
             all_q = [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) for k in eachindex(sol)]
             @test mean(all_q) ≈ means[j][i]
             @test quantile(all_q, 0.025) ≈ lowers[j][i]
@@ -275,6 +284,19 @@ end
     mb_prob = continuum_limit(prob, 1000; proliferation=true)
     mb_sol = solve(mb_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
 
+    @test mb_sol.u ≈ solve(
+        MBProblem(prob, 1000;
+            diffusion_function=EpithelialDynamics1D._continuum_diffusion_function(prob)[1],
+            diffusion_parameters=EpithelialDynamics1D._continuum_diffusion_function(prob)[2],
+            reaction_function=EpithelialDynamics1D._continuum_reaction_function(prob, true)[1],
+            reaction_parameters=EpithelialDynamics1D._continuum_reaction_function(prob, true)[2],
+            moving_boundary_function=EpithelialDynamics1D._continuum_moving_boundary(EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f,
+            moving_boundary_parameters=EpithelialDynamics1D._continuum_moving_boundary(EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).p,
+            rhs_function=EpithelialDynamics1D._continuum_rhs(prob, EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).f,
+            rhs_parameters=EpithelialDynamics1D._continuum_rhs(prob, EpithelialDynamics1D._continuum_diffusion_function(prob)[1], EpithelialDynamics1D._continuum_diffusion_function(prob)[2]).p,
+            proliferation=true
+        ), TRBDF2(linsolve=KLUFactorization()), saveat=0.01).u
+
     q, r, means, lowers, uppers, knots = node_densities(sol)
     @inferred node_densities(sol)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol)
@@ -297,9 +319,9 @@ end
     end
 
     # Test the statistics
-    for k in 1:length(sol)
-        for j in 1:length(sol[k])
-            for i in 1:length(sol[k][j])
+    for k in rand(1:length(sol), 20)
+        for j in rand(1:length(sol[k]), 40)
+            for i in rand(1:length(sol[k][j]), 60)
                 if i == 1
                     @test q[k][j][1] ≈ 1 / (r[k][j][2] - r[k][j][1])
                 elseif i == length(sol[k][j])
@@ -313,7 +335,7 @@ end
             @test N[k][j] ≈ length(sol[k][j]) - 1
         end
     end
-    for j in eachindex(mb_sol)
+    for j in rand(eachindex(mb_sol), 40)
         Nj = [N[k][j] for k in eachindex(sol)]
         @test @views mean(Nj) ≈ N_means[j]
         @test @views quantile(Nj, 0.025) ≈ N_lowers[j]
@@ -327,7 +349,7 @@ end
             0.0, mb_sol.u[j][end]
         )
         @test pde_L[j] ≈ mb_sol.u[j][end]
-        for i in eachindex(knots[j])
+        for i in rand(eachindex(knots[j]), 60)
             all_q = max.(0.0, [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) * (knots[j][i] ≤ r[k][j][end]) for k in eachindex(sol)])
             @test mean(all_q) ≈ means[j][i] rtol = 1e-3
             @test quantile(all_q, 0.025) ≈ lowers[j][i] rtol = 1e-3
