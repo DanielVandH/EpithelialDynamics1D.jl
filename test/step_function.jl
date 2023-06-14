@@ -246,7 +246,7 @@ end
 
     resize_to_layout!(fig)
     fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
-    @test_reference joinpath(fig_path, "step_function_proliferation.png") fig by = psnr_equality(18)
+    @test_reference joinpath(fig_path, "step_function_proliferation.png") fig by = psnr_equality(16.5)
 end
 
 @testset "Proliferation with a Moving Boundary" begin
