@@ -1,7 +1,3 @@
-# densities 
-# cell numbers 
-# right endpoints
-
 """
     cell_densities(cell_positions::AbstractVector{T}) where {T<:Number}
 
@@ -66,12 +62,12 @@ function node_densities(cell_positions::AbstractVector{T}) where {T<:Number}
 end
 
 """
-    get_knots(sol, num_knots = 500)   
+    get_knots(sol, num_knots = 500; indices = eachindex(sol))
 
 Computes knots for each time, covering the extremum of the cell positions across all 
-cell simulations.
+cell simulations. You can restrict the simultaions to consider using the `indices`.
 """
-function get_knots(sol::EnsembleSolution, num_knots=500)
+function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol))
     @static if VERSION < v"1.7"
         knots = Vector{LinRange{Float64}}(undef, length(first(sol)))
     else
@@ -81,7 +77,7 @@ function get_knots(sol::EnsembleSolution, num_knots=500)
     for i in eachindex(times)
         a = Inf
         b = -Inf
-        for j in eachindex(sol)
+        for j in indices
             for r in sol[j][i]
                 a = min(a, r[begin])
                 b = max(b, r[end])
@@ -107,8 +103,9 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 - `sol::EnsembleSolution`: The ensemble solution to a `CellProblem`.
 
 # Keyword Arguments
+- `indices = eachindex(sol)`: The indices of the cell simulations to consider. 
 - `num_knots::Int = 500`: The number of knots to use for the spline interpolation.
-- `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots)`: The knots to use for the spline interpolation.
+- `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots; indices)`: The knots to use for the spline interpolation.
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
 
 # Outputs 
@@ -119,15 +116,11 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 - `uppers::Vector{Vector{Float64}}`: The upper bounds of the confidence intervals for the node densities for each cell simulation.
 - `knots::Vector{Vector{Float64}}`: The knots used for the spline interpolation.
 """
-function node_densities(sol::EnsembleSolution; num_knots=500, knots=get_knots(sol, num_knots), alpha=0.05)
-    q = map(sol) do sol
-        node_densities.(sol.u)
-    end
-    r = map(sol) do sol
-        sol.u
-    end
+function node_densities(sol::EnsembleSolution; indices=eachindex(sol), num_knots=500, knots=get_knots(sol, num_knots; indices), alpha=0.05)
+    q = [node_densities.(sol[i].u) for i in indices]
+    r = [sol[i].u for i in indices]
     nt = length(first(sol))
-    nsims = length(sol)
+    nsims = length(indices)
     q_splines = zeros(num_knots, nt, nsims)
     q_means = [zeros(num_knots) for _ in 1:nt]
     q_lowers = [zeros(num_knots) for _ in 1:nt]
@@ -159,7 +152,7 @@ function node_densities(sol::EnsembleSolution; num_knots=500, knots=get_knots(so
 end
 
 """
-    cell_numbers(sol::EnsembleSolution; alpha=0.05)
+    cell_numbers(sol::EnsembleSolution; indices = eachindex(sol), alpha=0.05)
 
 Computes summary statistics for the cell numbers from an `EnsembleSolution` to a [`CellProblem`](@ref).
 
@@ -167,6 +160,7 @@ Computes summary statistics for the cell numbers from an `EnsembleSolution` to a
 - `sol::EnsembleSolution`: The ensemble solution to a `CellProblem`.
 
 # Keyword Arguments
+- `indices = eachindex(sol)`: The indices of the cell simulations to consider.
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
 
 # Outputs
@@ -175,9 +169,9 @@ Computes summary statistics for the cell numbers from an `EnsembleSolution` to a
 - `lowers::Vector{Float64}`: The lower bounds of the confidence intervals for the cell numbers for each cell simulation.
 - `uppers::Vector{Float64}`: The upper bounds of the confidence intervals for the cell numbers for each cell simulation.
 """
-function cell_numbers(sol::EnsembleSolution; alpha=0.05)
-    N = map(sol) do sol
-        length.(sol.u) .- 1
+function cell_numbers(sol::EnsembleSolution; indices=eachindex(sol), alpha=0.05)
+    N = map(indices) do i
+        length.(sol[i].u) .- 1
     end |> x -> reduce(hcat, x)
     N_means = zeros(size(N, 1))
     N_lowers = zeros(size(N, 1))
@@ -195,7 +189,7 @@ function cell_numbers(sol::EnsembleSolution; alpha=0.05)
 end
 
 """
-    leading_edges(sol::EnsembleSolution; alpha=0.05)
+    leading_edges(sol::EnsembleSolution; indices = eachindex(sol), alpha=0.05)
 
 Computes summary statistics for the leading edges from an `EnsembleSolution` to a [`CellProblem`](@ref).
 
@@ -203,6 +197,7 @@ Computes summary statistics for the leading edges from an `EnsembleSolution` to 
 - `sol::EnsembleSolution`: The ensemble solution to a `CellProblem`.
 
 # Keyword Arguments
+- `indices = eachindex(sol)`: The indices of the cell simulations to consider.
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
 
 # Outputs
@@ -211,9 +206,9 @@ Computes summary statistics for the leading edges from an `EnsembleSolution` to 
 - `lowers::Vector{Float64}`: The lower bounds of the confidence intervals for the leading edges for each cell simulation.
 - `uppers::Vector{Float64}`: The upper bounds of the confidence intervals for the leading edges for each cell simulation.
 """
-function leading_edges(sol::EnsembleSolution; alpha=0.05)
-    L = map(sol) do sol
-        map(sol) do sol
+function leading_edges(sol::EnsembleSolution; indices=eachindex(sol), alpha=0.05)
+    L = map(indices) do i
+        map(sol[i]) do sol
             sol[end]
         end
     end |> x -> reduce(hcat, x)

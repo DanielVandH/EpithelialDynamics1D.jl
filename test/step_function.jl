@@ -247,6 +247,46 @@ end
     resize_to_layout!(fig)
     fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
     @test_reference joinpath(fig_path, "step_function_proliferation.png") fig by = psnr_equality(16.5)
+
+    # Test the statistics when restricting to a specific set of simulation indices
+    _indices = rand(eachindex(sol), 20)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices)
+    @inferred node_densities(sol; indices=_indices)
+    N, N_means, N_lowers, N_uppers = cell_numbers(sol; indices=_indices)
+    @inferred cell_numbers(sol; indices=_indices)
+    @test all(≈(LinRange(0, 30, 500)), knots)
+    for (enum_k, k) in enumerate(_indices)
+        for j in rand(1:length(sol[k]), 40)
+            for i in rand(1:length(sol[k][j]), 60)
+                if i == 1
+                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                elseif i == length(sol[k][j])
+                    n = length(sol[k][j])
+                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                else
+                    @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
+                end
+                @test r[enum_k][j][i] == sol[k][j][i]
+            end
+            @test N[enum_k][j] ≈ length(sol[k][j]) - 1
+        end
+    end
+    for j in rand(1:length(fvm_sol), 50)
+        Nj = [N[k][j] for k in eachindex(_indices)]
+        @test mean(Nj) ≈ N_means[j]
+        @test quantile(Nj, 0.025) ≈ N_lowers[j]
+        @test quantile(Nj, 0.975) ≈ N_uppers[j]
+        @test pde_N[j] ≈ DataInterpolations.integral(
+            LinearInterpolation(fvm_sol.u[j], fvm_sol.prob.p.geometry.mesh_points),
+            0.0, 30.0
+        )
+        for i in rand(1:length(knots[j]), 50)
+            all_q = [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) for k in eachindex(_indices)]
+            @test mean(all_q) ≈ means[j][i]
+            @test quantile(all_q, 0.025) ≈ lowers[j][i]
+            @test quantile(all_q, 0.975) ≈ uppers[j][i]
+        end
+    end
 end
 
 @testset "Proliferation with a Moving Boundary" begin
@@ -363,4 +403,56 @@ end
     resize_to_layout!(fig)
     fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
     @test_reference joinpath(fig_path, "step_function_proliferation_moving_boundary.png") fig by = psnr_equality(15)
+
+    # Test the statistics when restricting to a specific set of simulation indices
+    _indices = rand(eachindex(sol), 20)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices)
+    @inferred node_densities(sol; indices=_indices)
+    N, N_means, N_lowers, N_uppers = cell_numbers(sol; indices=_indices)
+    @inferred cell_numbers(sol; indices=_indices)
+    L, L_means, L_lowers, L_uppers = leading_edges(sol; indices=_indices)
+    for j in eachindex(knots)
+        a = Inf
+        b = -Inf
+        m = minimum(sol[k][j][begin] for k in _indices)
+        M = maximum(sol[k][j][end] for k in _indices)
+        @test knots[j] == LinRange(m, M, 500)
+    end
+    for (enum_k, k) in enumerate(_indices)
+        for j in rand(1:length(sol[k]), 40)
+            for i in rand(1:length(sol[k][j]), 60)
+                if i == 1
+                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                elseif i == length(sol[k][j])
+                    n = length(sol[k][j])
+                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                else
+                    @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
+                end
+                @test r[enum_k][j][i] == sol[k][j][i]
+            end
+            @test N[enum_k][j] ≈ length(sol[k][j]) - 1
+        end
+    end
+    for j in rand(eachindex(mb_sol), 40)
+        Nj = [N[k][j] for k in eachindex(_indices)]
+        @test @views mean(Nj) ≈ N_means[j]
+        @test @views quantile(Nj, 0.025) ≈ N_lowers[j]
+        @test @views quantile(Nj, 0.975) ≈ N_uppers[j]
+        Lj = [L[k][j] for k in eachindex(_indices)]
+        @test @views mean(Lj) ≈ L_means[j]
+        @test @views quantile(Lj, 0.025) ≈ L_lowers[j]
+        @test @views quantile(Lj, 0.975) ≈ L_uppers[j]
+        @test pde_N[j] ≈ DataInterpolations.integral(
+            LinearInterpolation(mb_sol.u[j][begin:(end-1)], mb_sol.u[j][end] * mb_sol.prob.p.geometry.mesh_points),
+            0.0, mb_sol.u[j][end]
+        )
+        @test pde_L[j] ≈ mb_sol.u[j][end]
+        for i in rand(eachindex(knots[j]), 60)
+            all_q = max.(0.0, [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) * (knots[j][i] ≤ r[k][j][end]) for k in eachindex(_indices)])
+            @test mean(all_q) ≈ means[j][i] rtol = 1e-3
+            @test quantile(all_q, 0.025) ≈ lowers[j][i] rtol = 1e-3
+            @test quantile(all_q, 0.975) ≈ uppers[j][i] rtol = 1e-3
+        end
+    end
 end
