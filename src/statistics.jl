@@ -12,9 +12,7 @@ see [`node_densities`](@ref).
 function cell_densities(cell_positions::AbstractVector{T}) where {T<:Number}
     q = similar(cell_positions, length(cell_positions) - 1)
     for i in eachindex(q)
-        xᵢ = cell_positions[i]
-        xᵢ₊₁ = cell_positions[i+1]
-        q[i] = 1 / (xᵢ₊₁ - xᵢ)
+        q[i] = 1 / (cell_positions[i+1] - cell_positions[i])
     end
     return q
 end
@@ -74,7 +72,8 @@ function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol))
         knots = Vector{LinRange{Float64,Int}}(undef, length(first(sol)))
     end
     times = first(sol).t
-    for i in eachindex(times)
+    Base.Threads.@threads for i in eachindex(times)
+        local a, b
         a = Inf
         b = -Inf
         for j in indices
@@ -117,8 +116,12 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 - `knots::Vector{Vector{Float64}}`: The knots used for the spline interpolation.
 """
 function node_densities(sol::EnsembleSolution; indices=eachindex(sol), num_knots=500, knots=get_knots(sol, num_knots; indices), alpha=0.05)
-    q = [node_densities.(sol[i].u) for i in indices]
-    r = [sol[i].u for i in indices]
+    q = Vector{Vector{Vector{Float64}}}(undef, length(indices))
+    r = Vector{Vector{Vector{Float64}}}(undef, length(indices))
+    Base.Threads.@threads for i in eachindex(indices)
+        q[i] = node_densities.(sol[indices[i]].u)
+        r[i] = sol[indices[i]].u
+    end
     nt = length(first(sol))
     nsims = length(indices)
     q_splines = zeros(num_knots, nt, nsims)
@@ -139,7 +142,7 @@ function node_densities(sol::EnsembleSolution; indices=eachindex(sol), num_knots
             end
         end
     end
-    for j in 1:nt
+    Base.Threads.@threads for j in 1:nt
         knot_range = knots[j]
         for i in eachindex(knot_range)
             q_values = @views q_splines[i, j, :]
