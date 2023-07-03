@@ -106,6 +106,7 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 - `num_knots::Int = 500`: The number of knots to use for the spline interpolation.
 - `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots; indices)`: The knots to use for the spline interpolation.
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
+- `interp_fnc = (u, t) -> LinearInterpolation{true}(u, t)`: The function to use for constructing the interpolant.
 
 # Outputs 
 - `q::Vector{Vector{Vector{Float64}}}`: The node densities for each cell simulation.
@@ -115,7 +116,12 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 - `uppers::Vector{Vector{Float64}}`: The upper bounds of the confidence intervals for the node densities for each cell simulation.
 - `knots::Vector{Vector{Float64}}`: The knots used for the spline interpolation.
 """
-function node_densities(sol::EnsembleSolution; indices=eachindex(sol), num_knots=500, knots=get_knots(sol, num_knots; indices), alpha=0.05)
+function node_densities(sol::EnsembleSolution; 
+    indices=eachindex(sol), 
+    num_knots=500, 
+    knots=get_knots(sol, num_knots; indices), 
+    alpha=0.05,
+    interp_fnc = (u, t) -> LinearInterpolation{true}(u, t))
     q = Vector{Vector{Vector{Float64}}}(undef, length(indices))
     r = Vector{Vector{Vector{Float64}}}(undef, length(indices))
     Base.Threads.@threads for i in eachindex(indices)
@@ -132,7 +138,7 @@ function node_densities(sol::EnsembleSolution; indices=eachindex(sol), num_knots
         for j in 1:nt
             densities = q[k][j]
             cell_positions = r[k][j]
-            interp = LinearInterpolation{true}(densities, cell_positions)
+            interp = interp_fnc(densities, cell_positions)
             for i in eachindex(knots[j])
                 if knots[j][i] > r[k][j][end]
                     q_splines[i, j, k] = 0.0
