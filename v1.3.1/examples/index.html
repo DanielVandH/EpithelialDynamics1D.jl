@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Examples · EpithelialDynamics1D.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link rel="canonical" href="https://DanielVandH.github.io/EpithelialDynamics1D.jl/examples/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">EpithelialDynamics1D.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Examples</a><ul class="internal"><li><a class="tocitem" href="#Example-I:-Fixed-boundaries,-no-proliferation"><span>Example I: Fixed boundaries, no proliferation</span></a></li><li><a class="tocitem" href="#Example-II:-Moving-boundary,-no-proliferation"><span>Example II: Moving boundary, no proliferation</span></a></li><li><a class="tocitem" href="#Example-III:-Fixed-boundary,-with-proliferation"><span>Example III: Fixed boundary, with proliferation</span></a></li><li><a class="tocitem" href="#Example-IV:-Moving-boundary,-with-proliferation"><span>Example IV: Moving boundary, with proliferation</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Examples</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Examples</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/DanielVandH/EpithelialDynamics1D.jl/blob/main/docs/src/examples.md#" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h1><p>This section gives some examples for how the package can be used. We consider the same type of initial condition, migration, and prloiferation mechanisms, but break the example into four parts:</p><ol><li>Fixed boundaries, no proliferation;</li><li>Fixed boundaries, proliferation;</li><li>Free boundaries, no proliferation;</li><li>Free boundaries, proliferation.</li></ol><p>The initial condition we use is a <em>step function</em> density on <span>$0 \leq x \leq 30$</span>, with cells in <span>$[0, 15]$</span> of low density and cells in <span>$[15, 30]$</span> of great density:</p><pre><code class="language-julia hljs">initial_condition = [LinRange(0, 15, 16); LinRange(15, 30, 32)] |&gt; unique!
+fig = Figure(fontsize=33)
+ax = Axis(fig[1, 1], xlabel=L&quot;x&quot;,width=600,height=200)
+scatter!(ax, initial_condition, zero(initial_condition),color=:black,markersize=13)
+hideydecorations!(ax)
+resize_to_layout!(fig)
+fig</code></pre><figure>
+    <img src='../figures/step_function_initial_condition.png', alt'Step function initial condition'><br>
+</figure><p>When considering cell migration, the force law we use is the linear law <span>$F(\delta) = k(s - \delta)$</span>, where <span>$k = 10$</span> is the spring constant in each example, and <span>$s = 0.2$</span> is the resting spring length except in the last example where <span>$s=1$</span>. When including proliferation, we use the logistic law <span>$G(\delta) = \max\{0, \beta K[1 - 1/(K\delta)]\}$</span>, where <span>$\beta = 0.01$</span> is the intrinsic proliferation rate and <span>$K=15$</span> is the cell carrying capacity density. This choice of proliferation law slows down the growth of a cell population when there are many cells packed together, ensuring that a steady state can be reached (when there is no moving boundary). (To see that this is a logistic law, note that in the continuum limit the corresponding reaction term is <span>$qG(1/q) = \max\{0, \beta K q[1 - q/K]\}$</span>, which is basically the same term in the Fisher equation.)</p><h2 id="Example-I:-Fixed-boundaries,-no-proliferation"><a class="docs-heading-anchor" href="#Example-I:-Fixed-boundaries,-no-proliferation">Example I: Fixed boundaries, no proliferation</a><a id="Example-I:-Fixed-boundaries,-no-proliferation-1"></a><a class="docs-heading-anchor-permalink" href="#Example-I:-Fixed-boundaries,-no-proliferation" title="Permalink"></a></h2><p>We start with a problem that fixes both boundaries and only includes cell migration. The first step we take is to define the problem itself:</p><pre><code class="language-julia hljs">using EpithelialDynamics1D 
+force_law = (δ, p) -&gt; p.k * (p.s - δ)
+force_law_parameters = (k=10.0, s=0.2)
+final_time = 100.0
+damping_constant = 1.0
+initial_condition = [LinRange(0, 15, 16); LinRange(15, 30,32)] |&gt; unique!
+prob = CellProblem(;
+    force_law,
+    force_law_parameters,
+    final_time,
+    damping_constant,
+    initial_condition)</code></pre><p>This problem can be solved like any other problem from DifferentialEquations.jl. I find that <code>Tsit5()</code> is typically the fastest:</p><pre><code class="language-julia hljs">using OrdinaryDiffEq
+sol = solve(prob, Tsit5(), saveat=10.0)</code></pre><p>Let&#39;s compare this solution to its continuum limit. From <a href="https://doi.org/10.1016/j.jtbi.2018.12.025">Baker et al. (2019)</a>, the continuum limit is given by </p><p class="math-container">\[\begin{align*}
+\begin{array}{rcll}
+\dfrac{\partial q}{\partial t} &amp; = &amp; \dfrac{\partial}{\partial x}\left(D(q)\dfrac{\partial q}{\partial x}\right) &amp; 0 &lt; x &lt; L,\,t&gt;0,\\[9pt]
+\dfrac{\partial q}{\partial x} &amp; = &amp; 0 &amp; x = 0,\,t&gt;0,\\[9pt]
+\dfrac{\partial q}{\partial x} &amp; = &amp; 0 &amp; x = L,\,t&gt;0,\\[9pt]
+q(x, 0) &amp; = &amp; q_0(x) &amp; 0 \leq x \leq L.
+\end{array}
+\end{align*}\]</p><p>These PDEs are solved using <a href="https://github.com/DanielVandH/FiniteVolumeMethod1D.jl">FiniteVolumeMethod1D.jl</a>. This dependent variable <span>$q$</span> is the <em>cell density</em>.  There are two possible ways to define densities:</p><ol><li><code>cell_densities</code>: The <code>cell_densities</code> function defines the density of a cell <span>$(x_i, x_{i+1})$</span> as the reciprocal length <span>$q_i = 1/(x_{i+1} - x_i)$</span>.</li><li><code>node_densities</code>: The <code>node_densities</code> function, the one that actually gets used in the continuum limit, assigns densities to nodes <span>$x_i$</span> rather than cells <span>$(x_i, x_{i+1})$</span>. The density at a node <span>$x_i$</span> is defined by <span>$q_i = 2/(x_{i+1} - x_{i-1})$</span> if <span>$1 &lt; i &lt; n$</span>, where <span>$n$</span> is the number of cells at the given time, or <span>$q_1 = 1/(x_2 - x_1)$</span> and <span>$q_n = 1/(x_n - x_{n-1})$</span> at the endpoints.</li></ol><p>The latter definition is used in the continuum limit - the initial condition <span>$q_0(x)$</span> is a piecewise linear interpolant through the cell densities at the initial time from the cell problem&#39;s initial condition. The diffusion function <span>$D(q)$</span> is given by </p><p class="math-container">\[D(q) = -\dfrac{1}{\eta q^2}F&#39;\left(\dfrac{1}{q}\right),\]</p><p>which for our force law is <span>$D(q) = \alpha/q^2$</span>, <span>$\alpha = k/\eta$</span>.</p><p>The function <code>continuum_limit</code> constructs the <code>FVMProblem</code> defining this continuum limit:</p><pre><code class="language-julia hljs">fvm_prob = continuum_limit(prob, 1000)</code></pre><p>The second argument <code>1000</code> defines the number of mesh points to use for the continuum limit, using the piecewise linear interpolant <span>$q_0(x)$</span> to compute the densities at each mesh point. Now let&#39;s solve it:</p><pre><code class="language-julia hljs">using LinearSolve
+fvm_sol = solve(fvm_prob, TRBDF2(linsolve=KLUFactorization()), saveat=10.0)</code></pre><p>If the simulation is correct, noting that our value of <span>$k$</span> is sufficiently high so that the continuum limit should actually work, then <code>fvm_sol</code> should be a good match to the densities from <code>sol</code>. To verify this, let us make a plot:</p><pre><code class="language-julia hljs">node_densities_sol = node_densities.(sol.u)
+using CairoMakie
+let x = fvm_prob.geometry.mesh_points
+    fig = Figure(fontsize=36)
+    colors = (:red, :blue, :darkgreen, :black, :orange, :magenta,:cyan, :yellow, :brown, :gray, :lightblue)
+    ax = Axis(fig[1, 1], xlabel=L&quot;x&quot;, ylabel=L&quot;q(x, t)&quot;,
+        title=L&quot;(a): $q(x, t)$&quot;, titlealign=:left,
+        width=600, height=300)
+    [lines!(ax, sol.u[i], node_densities_sol[i], color=colors[i],linewidth=2) for i in eachindex(sol)]
+    [lines!(ax, x, fvm_sol.u[i], color=colors[i], linewidth=4,linestyle=:dashdot) for i in eachindex(sol)]
+    resize_to_layout!(fig)
+    fig
+end</code></pre><figure>
+    <img src='../figures/step_function.png', alt'Solution compared to continuum limit'><br>
+</figure><p>We see that the continuum limit lines up perfectly with the discrete results, and the solution approaches the steady state that is the average of the two densities from the initial condition. We provide a <code>SteadyCellProblem</code> for computing this steady state without running any simulation:</p><pre><code class="language-julia hljs">using SteadyStateDiffEq
+sprob = SteadyCellProblem(prob)
+ssol = solve(sprob, DynamicSS(TRBDF2()))
+q = cell_densities(ssol.u)</code></pre><pre><code class="language-julia-repl hljs">julia&gt; q = cell_densities(ssol.u)
+46-element Vector{Float64}:
+ 1.5333521372657852
+ 1.533352049592097
+ 1.5333518746535277
+ 1.5333516132657792
+ 1.5333512666476505
+ ⋮
+ 1.533315400438977
+ 1.5333150538372589
+ 1.5333147924620867
+ 1.5333146175320538
+ 1.5333145298626596</code></pre><h2 id="Example-II:-Moving-boundary,-no-proliferation"><a class="docs-heading-anchor" href="#Example-II:-Moving-boundary,-no-proliferation">Example II: Moving boundary, no proliferation</a><a id="Example-II:-Moving-boundary,-no-proliferation-1"></a><a class="docs-heading-anchor-permalink" href="#Example-II:-Moving-boundary,-no-proliferation" title="Permalink"></a></h2><p>Now let&#39;s allow the rightmost boundary to be free. This is done by setting <code>fix_right = false</code> in the <code>CellProblem</code> constructor.</p><pre><code class="language-julia hljs">using EpithelialDynamics1D, OrdinaryDiffEq
+
+force_law = (δ, p) -&gt; p.k * (p.s - δ)
+force_law_parameters = (k=10.0, s=0.2)
+final_time = 500.0
+damping_constant = 1.0
+initial_condition = [LinRange(0, 15, 16); LinRange(15, 30, 32)] |&gt;unique!
+prob = CellProblem(;
+    force_law,
+    force_law_parameters,
+    final_time,
+    damping_constant,
+    initial_condition,
+    fix_right=false)
+
+sol = solve(prob, Tsit5(), saveat=50.0)</code></pre><p>The continuum limit that we can compare to in this case is this given by, letting <span>$L(t)$</span> denote the position of the rightmost node (the <em>leading edge</em>) at the time <span>$t$</span>.</p><p class="math-container">\[\begin{align*}
+\begin{array}{rcll}
+\dfrac{\partial q}{\partial t} &amp; = &amp; \dfrac{\partial}{\partial x}\left(D(q)\dfrac{\partial q}{\partial x}\right) &amp; 0 &lt; x &lt; L(t),\,t&gt;0,\\[9pt]
+\dfrac{\partial q}{\partial x} &amp; = &amp; 0 &amp; x = 0, \\[9pt]
+\dfrac{1}{\eta}F\left(\dfrac{1}{q}\right) + \dfrac{D(q)}{2q}\dfrac{\partial q}{\partial x} &amp; = &amp; 0 &amp; x=L(t),\.t&gt;0,\\[9pt]
+\dfrac{\mathrm dL}{\mathrm dt} &amp; = &amp; -\dfrac{1}{q}D(q)\dfrac{\partial q}{\partial x} &amp; x = L(t),\,t&gt;0, \\[9pt]
+q(x, 0) &amp; = &amp; q_0(x), &amp; 0 \leq x \leq L(0), \\[9pt]
+L(0) &amp; = &amp; L_0.
+\end{array}
+\end{align*}\]</p><p>These PDEs are solved using <a href="https://github.com/DanielVandH/MovingBoundaryProblems1D.jl"><code>MovingBoundaryProblems1D.jl</code></a>. The initial endpoint <span>$L_0$</span> is given by the position of the rightmost node at <span>$t=0$</span>, in this case <span>$L_0 = 30$</span>. Once again, we construct the corresponding problem, in this case an <code>MBProblem</code>, using <code>continuum_limit</code>:</p><pre><code class="language-julia hljs">using LinearSolve
+
+mb_prob = continuum_limit(prob, 1000)
+mb_sol = solve(mb_prob, TRBDF2(linsolve=KLUFactorization()), saveat=50.0)</code></pre><p>The following code then plots and compares the two solutions.</p><pre><code class="language-julia hljs">node_densities_sol = node_densities.(sol.u)
+using CairoMakie
+let x = mb_prob.geometry.mesh_points
+    fig = Figure(fontsize=36)
+    colors = (:red, :blue, :darkgreen, :black, :orange, :magenta,:cyan, :yellow, :brown, :gray, :lightblue)
+    ax = Axis(fig[1, 1], xlabel=L&quot;x&quot;, ylabel=L&quot;q(x, t)&quot;,
+        title=L&quot;(a): $q(x, t)$&quot;, titlealign=:left,
+        width=600, height=300)
+    [lines!(ax, sol.u[i], node_densities_sol[i], color=colors[i],linewidth=2) for i in eachindex(sol)]
+    @views [lines!(ax, x .* mb_sol.u[i][end], mb_sol.u[i][begin(end-1)], color=colors[i], linewidth=4, linestyle=:dashdot)for i in eachindex(sol)]
+    resize_to_layout!(fig)
+    fig
+end</code></pre><figure>
+    <img src='../figures/step_function_moving_boundary.png', alt'Solution compared to continuum limit'><br>
+</figure><p>We see that the solutions match. The cells appear to be retreating from <span>$L(0) = 30$</span>, contracting inwards until a steady state is eventually reached. In this steady state,  the cells seem to pack into the interval <span>$[0, 10]$</span>. This makes sense - we start with 46 cells:</p><pre><code class="language-julia-repl hljs">julia&gt; length(initial_condition) - 1
+46</code></pre><p>With a resting spring length of <span>$s = 0.2$</span>, we can fit 46 cells into the interval <span>$[0, 46 \cdot 0.2] = [0, 9.2]$</span>. We can verify the properties of this steady state by either looking at the last time from the simulation, or by computing the steady state directly:</p><pre><code class="language-julia-repl hljs">julia&gt; diffs = diff(sol.u[end])
+46-element Vector{Float64}:
+ 0.20233969090471757
+ 0.20203667605421724
+ 0.20263100257524164
+ 0.20172744674985177
+ 0.20290519447397481
+ ⋮
+ 0.19964286225916084
+ 0.20089946315869867
+ 0.1997809643420574
+ 0.20045281417783656
+ 0.19992619110920273</code></pre><p>Indeed, the length of each cell is approximately <span>$s = 0.2$</span>, and the endpoint at the last time is:</p><pre><code class="language-julia-repl hljs">julia&gt; sol.u[end][end]
+9.267001076147542</code></pre><p>which is approaching <span>$9.2$</span>. If we look at the steady state:</p><pre><code class="language-julia hljs">using SteadyStateDiffEq 
+sprob = SteadyCellProblem(prob)</code></pre><pre><code class="language-julia-repl hljs">julia&gt; ssol = solve(sprob, DynamicSS(TRBDF2()))
+u: 47-element Vector{Float64}:
+ -3.8321946143843015e-20
+  0.20000125473810257
+  0.4000025080445262
+  0.6000037584892256
+  0.8000050046454205
+  ⋮
+  8.400036722439138
+  8.600036891490856
+  8.800037018448712
+  9.000037103167848
+  9.200037145551596</code></pre><p>We see that the cells all have lengths approximately equal to <span>$s$</span>, and  <span>$\lim_{t \to \infty} L(t) = 9.2$</span> as predicted.</p><h2 id="Example-III:-Fixed-boundary,-with-proliferation"><a class="docs-heading-anchor" href="#Example-III:-Fixed-boundary,-with-proliferation">Example III: Fixed boundary, with proliferation</a><a id="Example-III:-Fixed-boundary,-with-proliferation-1"></a><a class="docs-heading-anchor-permalink" href="#Example-III:-Fixed-boundary,-with-proliferation" title="Permalink"></a></h2><p>Now let us go back to the fixed boundary problem, but now include proliferation. Remember that the proliferation law we use is the logistic law <span>$G(\delta) = \max\{0, \beta K[1 - 1/(K\delta)]\}$</span>.</p><p>The procedure for solving problems with proliferation is different than without. Since the proliferation mechanism is stochastic, we need to simulate the system many times to capture the average behaviour. We use the ensemble solution features from DifferentialEquations.jl to do this, using the <code>trajectories</code> keyword to specify how many simulations of the systems we want.</p><pre><code class="language-julia hljs">using EpithelialDynamics1D, OrdinaryDiffEq 
+
+force_law = (δ, p) -&gt; p.k * (p.s - δ)
+force_law_parameters = (k=10.0, s=0.2)
+proliferation_law = (δ, p) -&gt; max(zero(δ), p.β * p.K * (one(δ) -inv(p.K * δ)))
+proliferation_law_parameters = (β=1e-2, K=15.0)
+proliferation_period = 1e-2
+final_time = 50.0
+damping_constant = 1.0
+initial_condition = [LinRange(0, 15, 16); LinRange(15, 30, 32)] |&gt;unique!
+prob = CellProblem(;
+    force_law,
+    force_law_parameters,
+    proliferation_law,
+    proliferation_law_parameters,
+    proliferation_period,
+    final_time,
+    damping_constant,
+    initial_condition)
+ens_prob = EnsembleProblem(prob)
+sol = solve(ens_prob, Tsit5(); trajectories=50, saveat=0.01)</code></pre><p>The continuum limit for this problem is similar to the problem without proliferation, except the PDE has a reaction term:</p><p class="math-container">\[\dfrac{\partial q}{\partial t} = \dfrac{\partial}{\partial x}\left(D(q)\dfrac{\partial q}{\partial x}\right) + qG\left(\dfrac{1}{q}\right);\]</p><p>the other boundary and initial conditions are the same as in the first example. As in the first example, PDEs of this form are solved using <a href="https://github.com/DanielVandH/FiniteVolumeMethod1D.jl">FiniteVolumeMethod1D.jl</a>.</p><pre><code class="language-julia hljs">using LinearSolve 
+
+fvm_prob = continuum_limit(prob, 1000; proliferation=true)
+fvm_sol = solve(fvm_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)</code></pre><p>Note that the <code>proliferation=true</code> keyword argument is needed in <code>continuum_limit</code>, else the continuum limit without proliferation is returned. </p><p>We provide several functions for computing statistics from the <code>EnsembleSolution</code>, <code>sol</code>. The function <code>node_densities</code> returns a <code>NamedTuple</code> with the following properties:</p><ol><li><code>q</code>: This is a vector-of-vector-of-vectors, where <code>q[k][j][i]</code> is the density of the <code>i</code>th node from the <code>j</code>th timepoint of the <span>$k$</span>th simulation.</li><li><code>r</code>: This is a vector-of-vector-of-vectors, where <code>r[k][j][i]</code> is the position of the <code>i</code>th node from the <code>j</code>th timepoint of the <code>k</code>th simulation.</li><li><code>knots</code>: To summarise the behaviour of the system at each time, we define a grid of knots at each time (defaults to 500 knots for each time). These knots are used to evaluate the piecewise linear interpolant of the densities at each time for each simulation, allowing us to summarise the densities at common knots for each time. With this property, <code>knots[j]</code> is the set of knots used for the <code>j</code>th time, <code>where knots[j][begin]</code> is the minimum of all cell positions from each simulation at the <code>j</code>th time, and <code>knots[j][end]</code> is the corresponding maximum. In this case, the minimum and maximum for each time are just <span>$0$</span> and <span>$30$</span>, respectively.</li><li><code>means</code>: This is a vector-of-vectors, where <code>means[j]</code> is a vector of average densities at each knot in <code>knots[j]</code>.</li><li><code>lowers</code>: This is a vector-of-vectors, where <code>lowers[j]</code> are the lower limits of the confidence intervals for the densities at each knot in <code>knots[j]</code>. The significance level of this confidence interval is <span>$\alpha=0.05$</span> by default, meaning these are <span>$(100\alpha/2)\% = 2.5\%$</span> quantiles.</li><li><code>uppers</code>: Similar to <code>lowers</code>, except these are the upper limits of the corresponding confidence intervals, i.e. the <span>$100(1-\alpha/2)\% = 97.5\%$</span> </li></ol><p>Another function that we provide is <code>cell_numbers</code>, used for obtaining cell numbers at each time and summarising for each simulation. The returned result is a <code>NamedTuple</code> with the following properties:</p><ol><li><code>N</code>: This is a vector-of-vectors, with <code>N[k][j]</code> the number of cells at the <code>j</code>th time of the <code>k</code>th simulation.</li><li><code>means</code>: This is a vector, with <code>N[j]</code> the average number of cells at the <code>j</code>th time.</li><li><code>lowers</code>: This is a vector, with <code>N[j]</code> the lower limit of the confidence interval of the cell numbers at the <code>j</code>th time. The significance level of this confidence interval is <span>$\alpha=0.05$</span> by default, meaning these are <span>$(100\alpha/2)\% = 2.5\%$</span> quantiles.</li><li><code>uppers</code>: Similar to <code>lowers</code>, except these are the upper limits of the corresponding confidence intervals, i.e. the <span>$100(1-\alpha/2)\% = 97.5\%$</span>.</li></ol><p>Another useful function for comparing with the PDEs is <code>integrate_pde</code>, which integrates the PDEs at a given time, returning <span>$N(t) = \int_0^{L(t)} q(x, t)\, \mathrm dx$</span>, an estimate for the number of cells at the time <span>$t$</span>. </p><p>Let&#39;s now compute these statistics:</p><pre><code class="language-julia hljs">(; q, r, means, lowers, uppers,knots) = node_densities(sol)
+N, N_means, N_lowers, N_uppers =cell_numbers(sol)
+pde_N = map(eachindex(fvm_sol)) do i
+    integrate_pde(fvm_sol, i)
+end</code></pre><p>Now we can plot.</p><pre><code class="language-julia hljs">using CairoMakie 
+
+fig = Figure(fontsize=33)
+colors = (:red, :blue, :darkgreen, :black, :magenta, :brown)
+plot_idx = (1, 1001, 2001, 3001, 4001, 5001)
+ax = Axis(fig[1, 1], xlabel=L&quot;x&quot;,ylabel=L&quot;q(x, t)&quot;,
+    title=L&quot;(a): $q(x, t)$&quot;,titlealign=:left,
+    width=600, height=300)
+[band!(ax, knots[i], lowers[i],uppers[i], color=(colors[j], 0.3))for (j, i) in enumerate(plot_idx)]
+[lines!(ax, knots[i], means[i],color=colors[j], linewidth=2) for (j, i) in enumerate(plot_idx)]
+[lines!(ax, fvm_prob.geometrymesh_points, fvm_sol.u[i],color=colors[j], linewidth=4,linestyle=:dashdot) for (j, i) in enumerate(plot_idx)]
+ax = Axis(fig[1, 2], xlabel=L&quot;t&quot;,ylabel=L&quot;N(t)&quot;,
+    title=L&quot;(b): $N(t)$&quot;,titlealign=:left,
+    width=600, height=300)
+band!(ax, fvm_sol.t, N_lowers,N_uppers, color=(:blue, 0.3))
+lines!(ax, fvm_sol.t, N_means,color=:blue, linewidth=2)
+lines!(ax, fvm_sol.t, pde_N,color=:black, linewidth=4,linestyle=:dashdot)
+resize_to_layout!(fig)</code></pre><figure>
+    <img src='../figures/step_function_proliferation.png', alt'Solution compared to continuum limit'><br>
+</figure><p>The confidence intervals are shown in the shaded regions, with the mean values given by a solid curve. We see that the continuum limit is a good match for the mean behaviour of both <span>$q(x, t)$</span> and <span>$N(t)$</span>. The density <span>$q(x, t)$</span> reaches a steady state with <span>$q(x, t) \to 15$</span> as <span>$t \to \infty$</span> for each <span>$x$</span>, which we expect given the cell carrying capacity density <span>$K = 15$</span>. If we had used e.g. a constant proliferation law <span>$G(\delta) = \beta$</span>, we would see growth indefinitely, so the logistic law is especially nice for this reason. The cell numbers reach a limit around <span>$450$</span>, which makes sense since <span>$\int_0^{30} K\,\mathrm dx = 30K = 450$</span>.</p><h2 id="Example-IV:-Moving-boundary,-with-proliferation"><a class="docs-heading-anchor" href="#Example-IV:-Moving-boundary,-with-proliferation">Example IV: Moving boundary, with proliferation</a><a id="Example-IV:-Moving-boundary,-with-proliferation-1"></a><a class="docs-heading-anchor-permalink" href="#Example-IV:-Moving-boundary,-with-proliferation" title="Permalink"></a></h2><p>Now let us consider proliferation with a moving boundary.</p><pre><code class="language-julia hljs">using EpithelialDynamics1D, OrdinaryDiffEq
+force_law = (δ, p) -&gt; p.k * (p.s - δ)
+force_law_parameters = (k=10.0, s=1)
+proliferation_law = (δ, p) -&gt; max(zero(δ), p.β * p.K *(one(δ) - inv(p.K * δ)))
+proliferation_law_parameters = (β=1e-2, K=15.0)
+proliferation_period = 1e-2
+final_time = 30.0
+damping_constant = 1.0
+initial_condition = [LinRange(0, 15, 16); LinRange(15,30, 32)] |&gt; unique!
+prob = CellProblem(;
+    force_law,
+    force_law_parameters,
+    proliferation_law,
+    proliferation_law_parameters,
+    proliferation_period,
+    final_time,
+    damping_constant,
+    initial_condition,
+    fix_right=false)
+ens_prob = EnsembleProblem(prob)
+sol = solve(ens_prob, Tsit5(); trajectories=50, saveat=001)</code></pre><p>The continuum limit is the same as it was in Example II, except now the PDE is the one given in Example III. We construct this continuum limit as follows, noting again that <a href="https://github.com/DanielVandH/MovingBoundaryProblems1D.jl"><code>MovingBoundaryProblems1D.jl</code></a> solves the moving boundary problem:</p><pre><code class="language-julia hljs">using LinearSolve
+mb_prob = continuum_limit(prob, 1000; proliferation=true)
+mb_sol = solve(mb_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)</code></pre><p>As in Example III, we can compute statistics from our ensemble solutions, as well as the corresponding values from the continuum limit:</p><pre><code class="language-julia hljs">(; q, r, means, lowers, uppers, knots) =node_densities(sol)
+@inferred node_densities(sol)
+N, N_means, N_lowers, N_uppers = cell_numbers(sol)
+@inferred cell_numbers(sol)
+L, L_means, L_lowers, L_uppers = leading_edge(sol)
+pde_N = map(eachindex(mb_sol)) do i
+    integrate_pde(mb_sol, i)
+end
+pde_L = map(mb_sol) do u
+    u[end]
+end</code></pre><p>Let&#39;s now plot these results.</p><pre><code class="language-julia hljs">using CairoMakie
+fig = Figure(fontsize=33)
+colors = (:red, :blue, :darkgreen,:black, :magenta, :brown)
+plot_idx = (1, 1001, 2001, 3001,4001, 5001)
+ax = Axis(fig[1, 1], xlabel=L&quot;x&quot;,ylabel=L&quot;q(x, t)&quot;,
+    title=L&quot;(a): $q(x, t)$&quot;,titlealign=:left,
+    width=600, height=300)
+[band!(ax, knots[i], lowers[i],uppers[i], color=(colors[j], 0.3))for (j, i) in enumerate(plot_idx)]
+[lines!(ax, knots[i], means[i],color=colors[j], linewidth=2) for(j, i) in enumerate(plot_idx)]
+@views [lines!(ax, mb_sol.u[i][end] * mb_prob.geometry.mesh_points,mb_sol.u[i][begin:(end-1)],color=colors[j], linewidth=4,linestyle=:dashdot) for (j, i) in enumerate(plot_idx)]
+ax = Axis(fig[1, 2], xlabel=L&quot;t&quot;,ylabel=L&quot;N(t)&quot;,
+    title=L&quot;(b): $N(t)$&quot;,titlealign=:left,
+    width=600, height=300)
+band!(ax, mb_sol.t, N_lowers,N_uppers, color=(:blue, 0.3))
+lines!(ax, mb_sol.t, N_means,color=:blue, linewidth=2)
+lines!(ax, mb_sol.t, pde_N,color=:black, linewidth=4,linestyle=:dashdot)
+ax = Axis(fig[1, 3], xlabel=L&quot;t&quot;,ylabel=L&quot;L(t)&quot;,
+    title=L&quot;(c): $L(t)$&quot;,titlealign=:left,
+    width=600, height=300)
+band!(ax, mb_sol.t, L_lowers,L_uppers, color=(:blue, 0.3))
+lines!(ax, mb_sol.t, L_means,color=:blue, linewidth=2)
+lines!(ax, mb_sol.t, pde_L,color=:black, linewidth=4,linestyle=:dashdot)
+resize_to_layout!(fig)</code></pre><figure>
+    <img src='../figures/step_function_proliferation_moving_boundary.png', alt'Solution compared to continuum limit'><br>
+</figure><p>Once again, the continuum limit is a great match.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Tuesday 4 July 2023 08:27">Tuesday 4 July 2023</span>. Using Julia version 1.9.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
