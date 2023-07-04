@@ -94,7 +94,7 @@ function get_knots(sol::ODESolution, num_knots=500)
 end
 
 """
-    node_densities(sol::EnsembleSolution; num_knots=500, knots=get_knots(sol, num_knots), alpha=0.05)
+    node_densities(sol::EnsembleSolution; num_knots=500, knots=get_knots(sol, num_knots), alpha=0.05, interp_fnc=(u, t) -> LinearInterpolation{true}(u, t))
 
 Computes summary statistics for the node densities from an `EnsembleSolution` to a [`CellProblem`](@ref).
 
