@@ -217,8 +217,8 @@ Computes summary statistics for the leading edges from an `EnsembleSolution` to 
 """
 function leading_edges(sol::EnsembleSolution; indices=eachindex(sol), alpha=0.05)
     L = map(indices) do i
-        map(sol[i]) do sol
-            sol[end]
+        map(sol[i]) do _sol
+            _sol[end]
         end
     end |> x -> reduce(hcat, x)
     L_means = zeros(size(L, 1))
