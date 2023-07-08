@@ -316,6 +316,35 @@ end
             @test quantile(all_q, 0.975) ≈ uppers[j][i]
         end
     end
+
+    # Using average leading edge 
+    _indices = rand(eachindex(sol), 40)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, use_extrema=false)
+    @inferred node_densities(sol; indices=_indices, use_extrema=false)
+    @test all(≈(LinRange(0, 30, 500)), knots)
+    for (enum_k, k) in enumerate(_indices)
+        for j in rand(1:length(sol[k]), 40)
+            for i in rand(1:length(sol[k][j]), 60)
+                if i == 1
+                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                elseif i == length(sol[k][j])
+                    n = length(sol[k][j])
+                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                else
+                    @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
+                end
+                @test r[enum_k][j][i] == sol[k][j][i]
+            end
+        end
+    end
+    for j in rand(1:length(fvm_sol), 50)
+        for i in rand(1:length(knots[j]), 50)
+            all_q = [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) for k in eachindex(_indices)]
+            @test mean(all_q) ≈ means[j][i]
+            @test quantile(all_q, 0.025) ≈ lowers[j][i]
+            @test quantile(all_q, 0.975) ≈ uppers[j][i]
+        end
+    end
 end
 
 @testset "Proliferation with a Moving Boundary" begin
@@ -514,6 +543,44 @@ end
     for j in rand(eachindex(mb_sol), 40)
         for i in rand(eachindex(knots[j]), 60)
             all_q = max.(0.0, [CubicSpline(q[k][j], r[k][j])(knots[j][i]) * (knots[j][i] ≤ r[k][j][end]) for k in eachindex(_indices)])
+            @test mean(all_q) ≈ means[j][i] rtol = 1e-3
+            @test quantile(all_q, 0.025) ≈ lowers[j][i] rtol = 1e-3
+            @test quantile(all_q, 0.975) ≈ uppers[j][i] rtol = 1e-3
+        end
+    end
+
+    # Using the average leading edge
+    (; L) = leading_edges(sol)
+    _L = stack(L)
+    _indices = rand(eachindex(sol), 20)
+    _L = _L[:, _indices]
+    _mL = mean.(eachrow(_L))
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, use_extrema=false)
+    @inferred node_densities(sol; indices=_indices, use_extrema=false)
+    for j in eachindex(knots)
+        a = mean(sol[k][j][begin] for k in _indices)
+        b = mean(sol[k][j][end] for k in _indices)
+        @test knots[j] ≈ LinRange(a, b, 500)
+        @test knots[j][end] ≈ _mL[j]
+    end
+    for (enum_k, k) in enumerate(_indices)
+        for j in rand(1:length(sol[k]), 40)
+            for i in 1:length(sol[k][j])
+                if i == 1
+                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                elseif i == length(sol[k][j])
+                    n = length(sol[k][j])
+                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                else
+                    @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
+                end
+                @test r[enum_k][j][i] == sol[k][j][i]
+            end
+        end
+    end
+    for j in rand(eachindex(mb_sol), 40)
+        for i in eachindex(knots[j])
+            all_q = max.(0.0, [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) * (knots[j][i] ≤ r[k][j][end]) for k in eachindex(_indices)])
             @test mean(all_q) ≈ means[j][i] rtol = 1e-3
             @test quantile(all_q, 0.025) ≈ lowers[j][i] rtol = 1e-3
             @test quantile(all_q, 0.975) ≈ uppers[j][i] rtol = 1e-3
