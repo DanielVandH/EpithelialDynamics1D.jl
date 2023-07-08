@@ -1,0 +1,20 @@
+{
+	"creators": [
+		{
+			"affiliation": "Queensland University of Technology",
+			"name": "VandenHeuvel, Daniel John",
+			"orcid": "0000-0001-6462-0135"
+		}
+	],
+	"description": "EpithelialDynamics1D.jl: Simulations of epithelial dynamics in 1D.",
+	"keywords": [
+    "differential-equations",
+    "discrete-simulation",
+    "epithelial-tissue",
+    "cell-simulation"
+	],
+	"license": "MIT",
+	"title": "EpithelialDynamics1D.jl",
+	"upload_type": "software",
+	"language": "eng"
+}
