@@ -8,10 +8,10 @@
 	],
 	"description": "EpithelialDynamics1D.jl: Simulations of epithelial dynamics in 1D.",
 	"keywords": [
-    "differential-equations",
-    "discrete-simulation",
-    "epithelial-tissue",
-    "cell-simulation"
+    	"differential-equations",
+    	"discrete-simulation",
+    	"epithelial-tissue",
+    	"cell-simulation"
 	],
 	"license": "MIT",
 	"title": "EpithelialDynamics1D.jl",
