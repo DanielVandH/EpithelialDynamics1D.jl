@@ -550,7 +550,7 @@ end
     end
 
     # Using the average leading edge
-    (; L) = leading_edges(sol)
+    L = leading_edges(sol).L
     _L = stack(L)
     _indices = rand(eachindex(sol), 20)
     _L = _L[:, _indices]
