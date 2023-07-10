@@ -21,6 +21,14 @@ Struct for representing a cell simulation problem.
 You can solve a `CellProblem` like you would solve a problem from DifferentialEquations.jl, e.g. with 
 
     solve(prob, Tsit5(), saveat = 0.1)
+
+The other kwargs for `solve` that we provide are:
+
+- `proliferation::Bool = false`: Whether to include proliferation.
+- `rng::AbstractRNG = Random.default_rng()`: The random number generator to use for proliferation.
+- `sort::Bool = false`: Whether to sort the cells after each step. This is useful for preventing the cells from becoming unsorted, which can happen due to numerical errors or force laws like `F(q) = k/q^(n+1)`, `n ≥ 0`.
+
+For proliferation problems, `EnsembleProblem` can be useful - see the docs.
 """
 Base.@kwdef struct CellProblem{F,Fp,G,Gp}
     force_law::F
