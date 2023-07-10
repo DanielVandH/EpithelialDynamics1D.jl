@@ -370,8 +370,8 @@ end
         damping_constant,
         initial_condition,
         fix_right=false)
-    ens_prob = EnsembleProblem(prob)
-    sol = solve(ens_prob, Tsit5(); trajectories=50, saveat=0.01, sort=true) # just see thta it works at least
+    ens_prob = EnsembleProblem(prob, sort=true)
+    sol = solve(ens_prob, Tsit5(); trajectories=50, saveat=0.01) # just see that it works at least 
     ens_prob = EnsembleProblem(prob)
     sol = solve(ens_prob, Tsit5(); trajectories=50, saveat=0.01)
 
