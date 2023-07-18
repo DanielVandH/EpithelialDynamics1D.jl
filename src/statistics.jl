@@ -33,25 +33,44 @@ function cell_midpoints(cell_positions::AbstractVector{T}) where {T<:Number}
     return x
 end
 
-"""
-    node_densities(cell_positions::AbstractVector{T}) where {T<:Number}
+@doc raw"""
+    node_densities(cell_positions::AbstractVector{T}; smooth_boundary=true) where {T<:Number}
 
-Compute the cell densities from the cell positions, assigning a density to each node. 
-The `i`th density is given by `2/(cell_positions[i+1] - cell_positions[i-1])` if
-`i` is not the first or last node, `1/(cell_positions[i+1] - cell_positions[i])`
-if `i` is the first node, and `1/(cell_positions[i] - cell_positions[i-1])` if `i`
-is the last node.
+Compute the cell densities from the cell positions, assigning a density to each node. If 
+`smooth_boundary` is true, then 
+
+```math
+q_i(t) = \begin{cases} \dfrac{2}{x_2(t)-x_1(t)} - \dfrac{2}{x_3(t)-x_1(t)} & i=1, \\[6pt]
+\dfrac{2}{x_{i+1}(t)-x_{i-1}(t)} & i=2,\ldots,n-1, \\[6pt]
+\dfrac{2}{x_n(t) - x_{n-1}(t)} - \dfrac{2}{x_n(t)-x_{n-2}(t)} & i=n. \end{cases}
+```
+
+Otherwise,
+
+```math
+q_i(t) = \begin{cases} \dfrac{1}{x_2(t)-x_1(t)} & i=1, \\[6pt]
+\dfrac{2}{x_{i+1}(t)-x_{i-1}(t)} & i=2,\ldots,n-1, \\[6pt]
+\dfrac{1}{x_n(t) - x_{n-1}(t)} & i=n. \end{cases}
+```
 
 If you want estimates of the densities for each cell rather than at each node,
 see [`cell_densities`](@ref).
 """
-function node_densities(cell_positions::AbstractVector{T}) where {T<:Number}
+function node_densities(cell_positions::AbstractVector{T}; smooth_boundary=true) where {T<:Number}
     q = similar(cell_positions)
     for i in eachindex(q)
         if i == firstindex(q)
-            q[i] = 1 / (cell_positions[i+1] - cell_positions[i])
+            if !smooth_boundary
+                q[i] = 1 / (cell_positions[i+1] - cell_positions[i])
+            else
+                q[i] = 2 / (cell_positions[i+1] - cell_positions[i]) - 2 / (cell_positions[i+2] - cell_positions[i])
+            end
         elseif i == lastindex(q)
-            q[i] = 1 / (cell_positions[i] - cell_positions[i-1])
+            if !smooth_boundary
+                q[i] = 1 / (cell_positions[i] - cell_positions[i-1])
+            else
+                q[i] = 2 / (cell_positions[i] - cell_positions[i-1]) - 2 / (cell_positions[i] - cell_positions[i-2])
+            end
         else
             q[i] = 2 / (cell_positions[i+1] - cell_positions[i-1])
         end
@@ -112,7 +131,7 @@ function get_knots(sol::ODESolution, num_knots=500)
 end
 
 """
-    node_densities(sol::EnsembleSolution; num_knots=500, knots=get_knots(sol, num_knots), alpha=0.05, interp_fnc=(u, t) -> LinearInterpolation{true}(u, t))
+    node_densities(sol::EnsembleSolution; num_knots=500, knots=get_knots(sol, num_knots), alpha=0.05, interp_fnc=(u, t) -> LinearInterpolation{true}(u, t), smooth_boundary=true)
 
 Computes summary statistics for the node densities from an `EnsembleSolution` to a [`CellProblem`](@ref).
 
@@ -126,6 +145,7 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 - `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots; indices, use_extrema)`: The knots to use for the spline interpolation.
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
 - `interp_fnc = (u, t) -> LinearInterpolation{true}(u, t)`: The function to use for constructing the interpolant.
+- `smooth_boundary::Bool = true`: Whether to use the smooth boundary node densities.
 
 # Outputs 
 - `q::Vector{Vector{Vector{Float64}}}`: The node densities for each cell simulation.
@@ -141,11 +161,12 @@ function node_densities(sol::EnsembleSolution;
     use_extrema=true,
     knots=get_knots(sol, num_knots; indices, use_extrema),
     alpha=0.05,
-    interp_fnc=(u, t) -> LinearInterpolation{true}(u, t))
+    interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
+    smooth_boundary=true)
     q = Vector{Vector{Vector{Float64}}}(undef, length(indices))
     r = Vector{Vector{Vector{Float64}}}(undef, length(indices))
     Base.Threads.@threads for i in eachindex(indices)
-        q[i] = node_densities.(sol[indices[i]].u)
+        q[i] = node_densities.(sol[indices[i]].u; smooth_boundary)
         r[i] = sol[indices[i]].u
     end
     nt = length(first(sol))

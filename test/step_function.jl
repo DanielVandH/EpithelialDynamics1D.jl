@@ -46,19 +46,24 @@ fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
 
         # Test the cell densities 
         cell_densities_sol = cell_densities.(sol.u)
-        node_densities_sol = node_densities.(sol.u)
+        node_densities_sol_nonsmooth = node_densities.(sol.u; smooth_boundary=false)
+        node_densities_sol_smooth = node_densities.(sol.u; smooth_boundary=true)
         for i in eachindex(sol)
             r = sol.u[i]
             q = cell_densities_sol[i]
-            nq = node_densities_sol[i]
+            nq_ns = node_densities_sol_nonsmooth[i]
+            nq_s = node_densities_sol_smooth[i]
             for j in eachindex(r)
                 if j == firstindex(r)
-                    @test nq[j] ≈ 1 / (r[j+1] - r[j])
+                    @test nq_ns[j] ≈ 1 / (r[j+1] - r[j])
+                    @test nq_s[j] ≈ LinearInterpolation([1 / (r[2] - r[1]), 2 / (r[3] - r[1])], [(r[1] + r[2]) / 2, r[2]])(r[1])
                     @test q[j] ≈ 1 / (r[j+1] - r[j])
                 elseif j == lastindex(r)
-                    @test nq[j] ≈ 1 / (r[j] - r[j-1])
+                    @test nq_ns[j] ≈ 1 / (r[j] - r[j-1])
+                    @test nq_s[j] ≈ LinearInterpolation([2 / (r[end] - r[end-2]), 1 / (r[end] - r[end-1])], [r[end-1], (r[end-1] + r[end]) / 2])(r[end])
                 else
-                    @test nq[j] ≈ 2 / (r[j+1] - r[j-1])
+                    @test nq_ns[j] ≈ 2 / (r[j+1] - r[j-1])
+                    @test nq_s[j] ≈ 2 / (r[j+1] - r[j-1])
                     @test q[j] ≈ 1 / (r[j+1] - r[j])
                 end
             end
@@ -70,7 +75,7 @@ fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
             colors = (:red, :blue, :darkgreen, :black, :orange, :magenta, :cyan, :yellow, :brown, :gray, :lightblue)
             ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"q(x, t)",
                 width=600, height=300)
-            [lines!(ax, sol.u[i], node_densities_sol[i], color=colors[i], linewidth=2) for i in eachindex(sol)]
+            [lines!(ax, sol.u[i], node_densities_sol_smooth[i], color=colors[i], linewidth=2) for i in eachindex(sol)]
             [lines!(ax, x, fvm_sol.u[i], color=colors[i], linewidth=4, linestyle=:dashdot) for i in eachindex(sol)]
             resize_to_layout!(fig)
             fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
@@ -115,19 +120,24 @@ end
 
         # Test the cell densities 
         cell_densities_sol = cell_densities.(sol.u)
-        node_densities_sol = node_densities.(sol.u)
+        node_densities_sol_nonsmooth = node_densities.(sol.u; smooth_boundary=false)
+        node_densities_sol_smooth = node_densities.(sol.u; smooth_boundary=true)
         for i in eachindex(sol)
             r = sol.u[i]
             q = cell_densities_sol[i]
-            nq = node_densities_sol[i]
+            nq_ns = node_densities_sol_nonsmooth[i]
+            nq_s = node_densities_sol_smooth[i]
             for j in eachindex(r)
                 if j == firstindex(r)
-                    @test nq[j] ≈ 1 / (r[j+1] - r[j])
+                    @test nq_ns[j] ≈ 1 / (r[j+1] - r[j])
+                    @test nq_s[j] ≈ LinearInterpolation([1 / (r[2] - r[1]), 2 / (r[3] - r[1])], [(r[1] + r[2]) / 2, r[2]])(r[1])
                     @test q[j] ≈ 1 / (r[j+1] - r[j])
                 elseif j == lastindex(r)
-                    @test nq[j] ≈ 1 / (r[j] - r[j-1])
+                    @test nq_ns[j] ≈ 1 / (r[j] - r[j-1])
+                    @test nq_s[j] ≈ LinearInterpolation([2 / (r[end] - r[end-2]), 1 / (r[end] - r[end-1])], [r[end-1], (r[end-1] + r[end]) / 2])(r[end])
                 else
-                    @test nq[j] ≈ 2 / (r[j+1] - r[j-1])
+                    @test nq_ns[j] ≈ 2 / (r[j+1] - r[j-1])
+                    @test nq_s[j] ≈ 2 / (r[j+1] - r[j-1])
                     @test q[j] ≈ 1 / (r[j+1] - r[j])
                 end
             end
@@ -140,7 +150,7 @@ end
             ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"q(x, t)",
                 title=L"(a): $q(x, t)$", titlealign=:left,
                 width=600, height=300)
-            [lines!(ax, sol.u[i], node_densities_sol[i], color=colors[i], linewidth=2) for i in eachindex(sol)]
+            [lines!(ax, sol.u[i], node_densities_sol_smooth[i], color=colors[i], linewidth=2) for i in eachindex(sol)]
             @views [lines!(ax, x .* mb_sol.u[i][end], mb_sol.u[i][begin:(end-1)], color=colors[i], linewidth=4, linestyle=:dashdot) for i in eachindex(sol)]
             resize_to_layout!(fig)
             fig_path = normpath(@__DIR__, "..", "docs", "src", "figures")
@@ -184,26 +194,34 @@ end
     fvm_prob = continuum_limit(prob, 1000; proliferation=true)
     fvm_sol = solve(fvm_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
 
-    q, r, means, lowers, uppers, knots = node_densities(sol)
+    q_s, r, means_s, lowers_s, uppers_s, knots_s = node_densities(sol; smooth_boundary=true)
+    q_ns, r_ns, means_ns, lowers_ns, uppers_ns, knots_ns = node_densities(sol; smooth_boundary=false)
+    @test r == r_ns
     @inferred node_densities(sol)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol)
     @inferred cell_numbers(sol)
     pde_N = map(eachindex(fvm_sol)) do i
         integrate_pde(fvm_sol, i)
     end
-    @test all(≈(LinRange(0, 30, 500)), knots)
+    @test all(≈(LinRange(0, 30, 500)), knots_s)
+    @test all(≈(LinRange(0, 30, 500)), knots_ns)
+    @test knots_s == knots_ns
+    knots = knots_s
 
     # Test the statistics 
     for k in rand(1:length(sol), 20)
         for j in rand(1:length(sol[k]), 40)
             for i in rand(1:length(sol[k][j]), 60)
                 if i == 1
-                    @test q[k][j][1] ≈ 1 / (r[k][j][2] - r[k][j][1])
+                    @test q_ns[k][j][1] ≈ 1 / (r[k][j][2] - r[k][j][1])
+                    @test q_s[k][j][1] ≈ LinearInterpolation([1 / (r[k][j][2] - r[k][j][1]), 2 / (r[k][j][3] - r[k][j][1])], [(r[k][j][1] + r[k][j][2]) / 2, r[k][j][2]])(r[k][j][1])
                 elseif i == length(sol[k][j])
                     n = length(sol[k][j])
-                    @test q[k][j][n] ≈ 1 / (r[k][j][n] - r[k][j][n-1])
+                    @test q_ns[k][j][n] ≈ 1 / (r[k][j][n] - r[k][j][n-1])
+                    @test q_s[k][j][n] ≈ LinearInterpolation([2 / (r[k][j][end] - r[k][j][end-2]), 1 / (r[k][j][end] - r[k][j][end-1])], [r[k][j][end-1], (r[k][j][end-1] + r[k][j][end]) / 2])(r[k][j][end])
                 else
-                    @test q[k][j][i] ≈ 2 / (r[k][j][i+1] - r[k][j][i-1])
+                    @test q_ns[k][j][i] ≈ 2 / (r[k][j][i+1] - r[k][j][i-1])
+                    @test q_s[k][j][i] ≈ 2 / (r[k][j][i+1] - r[k][j][i-1])
                 end
                 @test r[k][j][i] == sol[k][j][i]
             end
@@ -220,10 +238,14 @@ end
             0.0, 30.0
         )
         for i in rand(1:length(knots[j]), 50)
-            all_q = [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) for k in eachindex(sol)]
-            @test mean(all_q) ≈ means[j][i]
-            @test quantile(all_q, 0.025) ≈ lowers[j][i]
-            @test quantile(all_q, 0.975) ≈ uppers[j][i]
+            all_q = [LinearInterpolation(q_s[k][j], r[k][j])(knots[j][i]) for k in eachindex(sol)]
+            @test mean(all_q) ≈ means_s[j][i]
+            @test quantile(all_q, 0.025) ≈ lowers_s[j][i]
+            @test quantile(all_q, 0.975) ≈ uppers_s[j][i]
+            all_q = [LinearInterpolation(q_ns[k][j], r[k][j])(knots[j][i]) for k in eachindex(sol)]
+            @test mean(all_q) ≈ means_ns[j][i]
+            @test quantile(all_q, 0.025) ≈ lowers_ns[j][i]
+            @test quantile(all_q, 0.975) ≈ uppers_ns[j][i]
         end
     end
 
@@ -236,8 +258,8 @@ end
     ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"q(x, t)",
         title=L"(a): $q(x, t)$", titlealign=:left,
         width=600, height=300)
-    [band!(ax, knots[i], lowers[i], uppers[i], color=(colors[j], 0.3)) for (j, i) in enumerate(plot_idx)]
-    [lines!(ax, knots[i], means[i], color=colors[j], linewidth=2) for (j, i) in enumerate(plot_idx)]
+    [band!(ax, knots[i], lowers_s[i], uppers_s[i], color=(colors[j], 0.3)) for (j, i) in enumerate(plot_idx)]
+    [lines!(ax, knots[i], means_s[i], color=colors[j], linewidth=2) for (j, i) in enumerate(plot_idx)]
     [lines!(ax, fvm_prob.geometry.mesh_points, fvm_sol.u[i], color=colors[j], linewidth=4, linestyle=:dashdot) for (j, i) in enumerate(plot_idx)]
 
     ax = Axis(fig[1, 2], xlabel=L"t", ylabel=L"N(t)",
@@ -262,10 +284,10 @@ end
         for j in rand(1:length(sol[k]), 40)
             for i in rand(1:length(sol[k][j]), 60)
                 if i == 1
-                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                    @test q[enum_k][j][1] ≈ LinearInterpolation([1 / (r[enum_k][j][2] - r[enum_k][j][1]), 2 / (r[enum_k][j][3] - r[enum_k][j][1])], [(r[enum_k][j][1] + r[enum_k][j][2]) / 2, r[enum_k][j][2]])(r[enum_k][j][1])
                 elseif i == length(sol[k][j])
                     n = length(sol[k][j])
-                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                    @test q[enum_k][j][n] ≈ LinearInterpolation([2 / (r[enum_k][j][end] - r[enum_k][j][end-2]), 1 / (r[enum_k][j][end] - r[enum_k][j][end-1])], [r[enum_k][j][end-1], (r[enum_k][j][end-1] + r[enum_k][j][end]) / 2])(r[enum_k][j][end])
                 else
                     @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
                 end
@@ -300,10 +322,10 @@ end
         for j in rand(1:length(sol[k]), 40)
             for i in rand(1:length(sol[k][j]), 60)
                 if i == 1
-                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                    @test q[enum_k][j][1] ≈ LinearInterpolation([1 / (r[enum_k][j][2] - r[enum_k][j][1]), 2 / (r[enum_k][j][3] - r[enum_k][j][1])], [(r[enum_k][j][1] + r[enum_k][j][2]) / 2, r[enum_k][j][2]])(r[enum_k][j][1])
                 elseif i == length(sol[k][j])
                     n = length(sol[k][j])
-                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                    @test q[enum_k][j][n] ≈ LinearInterpolation([2 / (r[enum_k][j][end] - r[enum_k][j][end-2]), 1 / (r[enum_k][j][end] - r[enum_k][j][end-1])], [r[enum_k][j][end-1], (r[enum_k][j][end-1] + r[enum_k][j][end]) / 2])(r[enum_k][j][end])
                 else
                     @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
                 end
@@ -322,7 +344,7 @@ end
 
     # Using average leading edge 
     _indices = rand(eachindex(sol), 40)
-    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, use_extrema=false)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, use_extrema=false, smooth_boundary=false)
     @inferred node_densities(sol; indices=_indices, use_extrema=false)
     @test all(≈(LinRange(0, 30, 500)), knots)
     for (enum_k, k) in enumerate(_indices)
@@ -378,7 +400,7 @@ end
     mb_prob = continuum_limit(prob, 1000; proliferation=true)
     mb_sol = solve(mb_prob, TRBDF2(linsolve=KLUFactorization()), saveat=0.01)
 
-    q, r, means, lowers, uppers, knots = node_densities(sol)
+    q, r, means, lowers, uppers, knots = node_densities(sol; smooth_boundary=true)
     @inferred node_densities(sol)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol)
     @inferred cell_numbers(sol)
@@ -404,10 +426,10 @@ end
         for j in rand(1:length(sol[k]), 40)
             for i in rand(1:length(sol[k][j]), 60)
                 if i == 1
-                    @test q[k][j][1] ≈ 1 / (r[k][j][2] - r[k][j][1])
+                    @test q[k][j][1] ≈ LinearInterpolation([1 / (r[k][j][2] - r[k][j][1]), 2 / (r[k][j][3] - r[k][j][1])], [(r[k][j][1] + r[k][j][2]) / 2, r[k][j][2]])(r[k][j][1])
                 elseif i == length(sol[k][j])
                     n = length(sol[k][j])
-                    @test q[k][j][n] ≈ 1 / (r[k][j][n] - r[k][j][n-1])
+                    @test q[k][j][n] ≈ LinearInterpolation([2 / (r[k][j][end] - r[k][j][end-2]), 1 / (r[k][j][end] - r[k][j][end-1])], [r[k][j][end-1], (r[k][j][end-1] + r[k][j][end]) / 2])(r[k][j][end])
                 else
                     @test q[k][j][i] ≈ 2 / (r[k][j][i+1] - r[k][j][i-1])
                 end
@@ -469,7 +491,7 @@ end
 
     # Test the statistics when restricting to a specific set of simulation indices
     _indices = rand(eachindex(sol), 20)
-    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, smooth_boundary=false)
     @inferred node_densities(sol; indices=_indices)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol; indices=_indices)
     @inferred cell_numbers(sol; indices=_indices)
@@ -534,10 +556,10 @@ end
         for j in rand(1:length(sol[k]), 40)
             for i in rand(1:length(sol[k][j]), 60)
                 if i == 1
-                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                    @test q[enum_k][j][1] ≈ LinearInterpolation([1 / (r[enum_k][j][2] - r[enum_k][j][1]), 2 / (r[enum_k][j][3] - r[enum_k][j][1])], [(r[enum_k][j][1] + r[enum_k][j][2]) / 2, r[enum_k][j][2]])(r[enum_k][j][1])
                 elseif i == length(sol[k][j])
                     n = length(sol[k][j])
-                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                    @test q[enum_k][j][n] ≈ LinearInterpolation([2 / (r[enum_k][j][end] - r[enum_k][j][end-2]), 1 / (r[enum_k][j][end] - r[enum_k][j][end-1])], [r[enum_k][j][end-1], (r[enum_k][j][end-1] + r[enum_k][j][end]) / 2])(r[enum_k][j][end])
                 else
                     @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
                 end
@@ -572,10 +594,10 @@ end
         for j in rand(1:length(sol[k]), 40)
             for i in 1:length(sol[k][j])
                 if i == 1
-                    @test q[enum_k][j][1] ≈ 1 / (r[enum_k][j][2] - r[enum_k][j][1])
+                    @test q[enum_k][j][1] ≈ LinearInterpolation([1 / (r[enum_k][j][2] - r[enum_k][j][1]), 2 / (r[enum_k][j][3] - r[enum_k][j][1])], [(r[enum_k][j][1] + r[enum_k][j][2]) / 2, r[enum_k][j][2]])(r[enum_k][j][1])
                 elseif i == length(sol[k][j])
                     n = length(sol[k][j])
-                    @test q[enum_k][j][n] ≈ 1 / (r[enum_k][j][n] - r[enum_k][j][n-1])
+                    @test q[enum_k][j][n] ≈ LinearInterpolation([2 / (r[enum_k][j][end] - r[enum_k][j][end-2]), 1 / (r[enum_k][j][end] - r[enum_k][j][end-1])], [r[enum_k][j][end-1], (r[enum_k][j][end-1] + r[enum_k][j][end]) / 2])(r[enum_k][j][end])
                 else
                     @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
                 end
