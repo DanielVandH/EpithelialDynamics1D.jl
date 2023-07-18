@@ -79,14 +79,19 @@ function node_densities(cell_positions::AbstractVector{T}; smooth_boundary=true)
 end
 
 """
-    get_knots(sol, num_knots = 500; indices = eachindex(sol), use_max=true)
+    get_knots(sol, num_knots = 500; indices = eachindex(sol), stat=maximum)
 
 Computes knots for each time, covering the extremum of the cell positions across all 
 cell simulations. You can restrict the simultaions to consider using the `indices`.
-If `use_max` is true, then the knots will be obtained by taking the extreme node positions 
-for each `time`, otherwise the average is used.
+The knots are obtained by applying `stat`, a tuple of functions for the left and right sides,
+to the vector of extrema at each time. For example, if `stat=maximum` then, at each time, 
+the knots range between the smallest position observed and the maximum position 
+observed across each simulation at that time.
 """
-function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol), use_extrema=true)
+function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol), stat=(minimum, maximum))
+    if stat isa Function
+        stat = (stat, stat)
+    end
     @static if VERSION < v"1.7"
         knots = Vector{LinRange{Float64}}(undef, length(first(sol)))
     else
@@ -95,31 +100,13 @@ function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol),
     times = first(sol).t
     Base.Threads.@threads for i in eachindex(times)
         local a, b
-        if use_extrema
-            a = Inf
-            b = -Inf
-        else
-            a = 0.0
-            b = 0.0
-            ctr = 0
+        a = zeros(length(indices))
+        b = zeros(length(indices))
+        for (ℓ, j) in enumerate(indices)
+            a[ℓ] = sol[j].u[i][begin]
+            b[ℓ] = sol[j].u[i][end]
         end
-        for j in indices
-            _a = sol[j][i][begin]
-            _b = sol[j][i][end]
-            if use_extrema
-                a = min(a, _a)
-                b = max(b, _b)
-            else
-                a += _a
-                b += _b
-                ctr += 1
-            end
-        end
-        if !use_extrema
-            a /= ctr
-            b /= ctr
-        end
-        knots[i] = LinRange(a, b, num_knots)
+        knots[i] = LinRange(stat[1](a), stat[2](b), num_knots)
     end
     return knots
 end
@@ -131,7 +118,14 @@ function get_knots(sol::ODESolution, num_knots=500)
 end
 
 """
-    node_densities(sol::EnsembleSolution; num_knots=500, knots=get_knots(sol, num_knots), alpha=0.05, interp_fnc=(u, t) -> LinearInterpolation{true}(u, t), smooth_boundary=true)
+    node_densities(sol::EnsembleSolution;
+        indices=eachindex(sol),
+        num_knots=500,
+        stat=(minimum, maximum),
+        knots=get_knots(sol, num_knots; indices, stat),
+        alpha=0.05,
+        interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
+        smooth_boundary=true)
 
 Computes summary statistics for the node densities from an `EnsembleSolution` to a [`CellProblem`](@ref).
 
@@ -141,8 +135,8 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 # Keyword Arguments
 - `indices = eachindex(sol)`: The indices of the cell simulations to consider. 
 - `num_knots::Int = 500`: The number of knots to use for the spline interpolation.
-- `use_extrema::Bool = true`: Whether to use the extrema of the cell positions for the knots, or the average.
-- `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots; indices, use_extrema)`: The knots to use for the spline interpolation.
+- `stat = (minimum, maximum)`: How to summarise the knots for `get_knots`.
+- `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots; indices, stat)`: The knots to use for the spline interpolation.
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
 - `interp_fnc = (u, t) -> LinearInterpolation{true}(u, t)`: The function to use for constructing the interpolant.
 - `smooth_boundary::Bool = true`: Whether to use the smooth boundary node densities.
@@ -158,8 +152,8 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 function node_densities(sol::EnsembleSolution;
     indices=eachindex(sol),
     num_knots=500,
-    use_extrema=true,
-    knots=get_knots(sol, num_knots; indices, use_extrema),
+    stat=(minimum, maximum),
+    knots=get_knots(sol, num_knots; indices, stat),
     alpha=0.05,
     interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
     smooth_boundary=true)

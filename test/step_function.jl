@@ -344,8 +344,8 @@ end
 
     # Using average leading edge 
     _indices = rand(eachindex(sol), 40)
-    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, use_extrema=false, smooth_boundary=false)
-    @inferred node_densities(sol; indices=_indices, use_extrema=false)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, stat=mean, smooth_boundary=false)
+    @inferred node_densities(sol; indices=_indices, stat=mean)
     @test all(≈(LinRange(0, 30, 500)), knots)
     for (enum_k, k) in enumerate(_indices)
         for j in rand(1:length(sol[k]), 40)
@@ -543,13 +543,13 @@ end
 
     # Test the statistics with a specific interpolation function 
     _indices = rand(eachindex(sol), 20)
-    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, interp_fnc=CubicSpline)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, interp_fnc=CubicSpline, stat = minimum)
     @inferred node_densities(sol; indices=_indices, interp_fnc=CubicSpline)
     for j in eachindex(knots)
         a = Inf
         b = -Inf
         m = minimum(sol[k][j][begin] for k in _indices)
-        M = maximum(sol[k][j][end] for k in _indices)
+        M = minimum(sol[k][j][end] for k in _indices)
         @test knots[j] == LinRange(m, M, 500)
     end
     for (enum_k, k) in enumerate(_indices)
@@ -582,8 +582,8 @@ end
     _indices = rand(eachindex(sol), 20)
     _L = _L[:, _indices]
     _mL = mean.(eachrow(_L))
-    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, use_extrema=false)
-    @inferred node_densities(sol; indices=_indices, use_extrema=false)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, stat=mean)
+    @inferred node_densities(sol; indices=_indices, stat=mean)
     for j in eachindex(knots)
         a = mean(sol[k][j][begin] for k in _indices)
         b = mean(sol[k][j][end] for k in _indices)
