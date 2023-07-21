@@ -7,21 +7,21 @@ function cell_odes!(dr, r, prob, t)
     p = prob.force_law_parameters
     for i in (firstindex(dr)+1):(lastindex(dr)-1)
         δᵢ₋₁ = r[i] - r[i-1]
-        δᵢ = r[i+1] - r[i]
-        Fᵢ₋₁ = F(δᵢ₋₁, p)
-        Fᵢ = F(δᵢ, p)
-        dr[i] = η⁻¹ * (Fᵢ₋₁ - Fᵢ)
+        δᵢ₊₁ = r[i] - r[i+1]
+        Fᵢ₋₁ = F(abs(δᵢ₋₁), p) * sign(δᵢ₋₁)
+        Fᵢ₊₁ = F(abs(δᵢ₊₁), p) * sign(δᵢ₊₁)
+        dr[i] = η⁻¹ * (Fᵢ₋₁ + Fᵢ₊₁)
     end
     if !fix_left
-        δ₁ = r[begin+1] - r[begin]
-        F₁ = F(δ₁, p)
-        dr[begin] = -η⁻¹ * F₁
+        δ₁ = r[begin] - r[begin+1]
+        F₁ = F(abs(δ₁), p) * sign(δ₁)
+        dr[begin] = η⁻¹ * F₁
     else
         dr[begin] = zero(dr[begin])
     end
     if !fix_right
         δₙ₋₁ = r[end] - r[end-1]
-        Fₙ₋₁ = F(δₙ₋₁, p)
+        Fₙ₋₁ = F(abs(δₙ₋₁), p) * sign(δₙ₋₁)
         dr[end] = η⁻¹ * Fₙ₋₁
     else
         dr[end] = zero(dr[end])
