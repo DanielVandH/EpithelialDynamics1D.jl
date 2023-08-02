@@ -127,7 +127,8 @@ end
         interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
         smooth_boundary=true)
 
-Computes summary statistics for the node densities from an `EnsembleSolution` to a [`CellProblem`](@ref).
+Computes summary statistics for the node densities from an `EnsembleSolution` to a [`CellProblem`](@ref). Any 
+negative values are set to zero.
 
 # Arguments 
 - `sol::EnsembleSolution`: The ensemble solution to a `CellProblem`.
@@ -140,6 +141,7 @@ Computes summary statistics for the node densities from an `EnsembleSolution` to
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
 - `interp_fnc = (u, t) -> LinearInterpolation{true}(u, t)`: The function to use for constructing the interpolant.
 - `smooth_boundary::Bool = true`: Whether to use the smooth boundary node densities.
+- `extrapolate = false`: Whether to allow for extrapolation when considering evaluating outside the range of cells for a given time and a given simulation.
 
 # Outputs 
 - `q::Vector{Vector{Vector{Float64}}}`: The node densities for each cell simulation.
@@ -156,7 +158,8 @@ function node_densities(sol::EnsembleSolution;
     knots=get_knots(sol, num_knots; indices, stat),
     alpha=0.05,
     interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
-    smooth_boundary=true)
+    smooth_boundary=true,
+    extrapolate=false)
     q = Vector{Vector{Vector{Float64}}}(undef, length(indices))
     r = Vector{Vector{Vector{Float64}}}(undef, length(indices))
     Base.Threads.@threads for i in eachindex(indices)
@@ -175,7 +178,7 @@ function node_densities(sol::EnsembleSolution;
             cell_positions = r[k][j]
             interp = interp_fnc(densities, cell_positions)
             for i in eachindex(knots[j])
-                if knots[j][i] > r[k][j][end]
+                if !extrapolate && knots[j][i] > r[k][j][end] 
                     q_splines[i, j, k] = 0.0
                 else
                     q_splines[i, j, k] = max(0.0, interp(knots[j][i]))
