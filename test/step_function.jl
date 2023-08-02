@@ -613,4 +613,42 @@ end
             @test quantile(all_q, 0.975) ≈ uppers[j][i] rtol = 1e-3
         end
     end
+
+    # Using the average leading edge and allowing extrapolation
+    L = leading_edges(sol).L
+    _L = stack(L)
+    _indices = rand(eachindex(sol), 20)
+    _L = _L[:, _indices]
+    _mL = mean.(eachrow(_L))
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, stat=mean, extrapolate=true)
+    @inferred node_densities(sol; indices=_indices, stat=mean,extrapolate=true)
+    for j in eachindex(knots)
+        a = mean(sol[k][j][begin] for k in _indices)
+        b = mean(sol[k][j][end] for k in _indices)
+        @test knots[j] ≈ LinRange(a, b, 500)
+        @test knots[j][end] ≈ _mL[j]
+    end
+    for (enum_k, k) in enumerate(_indices)
+        for j in rand(1:length(sol[k]), 40)
+            for i in 1:length(sol[k][j])
+                if i == 1
+                    @test q[enum_k][j][1] ≈ LinearInterpolation([1 / (r[enum_k][j][2] - r[enum_k][j][1]), 2 / (r[enum_k][j][3] - r[enum_k][j][1])], [(r[enum_k][j][1] + r[enum_k][j][2]) / 2, r[enum_k][j][2]])(r[enum_k][j][1])
+                elseif i == length(sol[k][j])
+                    n = length(sol[k][j])
+                    @test q[enum_k][j][n] ≈ LinearInterpolation([2 / (r[enum_k][j][end] - r[enum_k][j][end-2]), 1 / (r[enum_k][j][end] - r[enum_k][j][end-1])], [r[enum_k][j][end-1], (r[enum_k][j][end-1] + r[enum_k][j][end]) / 2])(r[enum_k][j][end])
+                else
+                    @test q[enum_k][j][i] ≈ 2 / (r[enum_k][j][i+1] - r[enum_k][j][i-1])
+                end
+                @test r[enum_k][j][i] == sol[k][j][i]
+            end
+        end
+    end
+    for j in rand(eachindex(mb_sol), 40)
+        for i in eachindex(knots[j])
+            all_q = max.(0.0, [LinearInterpolation(q[k][j], r[k][j])(knots[j][i])  for k in eachindex(_indices)])
+            @test mean(all_q) ≈ means[j][i] rtol = 1e-3
+            @test quantile(all_q, 0.025) ≈ lowers[j][i] rtol = 1e-3
+            @test quantile(all_q, 0.975) ≈ uppers[j][i] rtol = 1e-3
+        end
+    end
 end
