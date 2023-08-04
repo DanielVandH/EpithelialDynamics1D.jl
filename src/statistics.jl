@@ -277,7 +277,7 @@ function node_densities_means_only(sol::EnsembleSolution;
         end
     end
     for j in 1:nt
-        means[j] ./= num_knots
+        means[j] ./= length(indices)
     end
     return (; means=means, knots=knots)
 end
