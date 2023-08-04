@@ -248,6 +248,40 @@ function node_densities(sol::EnsembleSolution;
     return (q=q, r=r, means=q_means, lowers=q_lowers, uppers=q_uppers, knots=knots)
 end
 
+function node_densities_means_only(sol::EnsembleSolution;
+    indices=eachindex(sol),
+    num_knots=500,
+    stat=(minimum, maximum),
+    parallel=false,
+    knots=get_knots(sol, num_knots; indices, stat),
+    alpha=0.05,
+    interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
+    smooth_boundary=true,
+    extrapolate=false)
+    means = [zeros(num_knots) for _ in 1:nt]
+    nt = length(first(sol))
+    for k in indices
+        for j in 1:nt
+            knot_range = knots[j]
+            densities = node_densities(sol[k].u; smooth_boundary)
+            cell_positions = sol[k].u[j]
+            interp = interp_fnc(densities, cell_positions)
+            for i in eachindex(knot_range)
+                q = if !extrapolate && knots[j][i] > cell_positions[end]
+                    0.0
+                else
+                    max(0.0, interp(knots[j][i]))
+                end
+                means[j][i] += q
+            end
+        end
+    end
+    for j in 1:nt
+        means[j] ./= num_knots
+    end
+    return (; means=means, knots=knots)
+end
+
 """
     cell_numbers(sol::EnsembleSolution; indices = eachindex(sol), alpha=0.05)
 

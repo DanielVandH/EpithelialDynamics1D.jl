@@ -13,7 +13,7 @@ using DataInterpolations
 
 export CellProblem, SteadyCellProblem
 export solve
-export cell_densities, cell_midpoints, node_densities
+export cell_densities, cell_midpoints, node_densities, node_densities_means_only
 export continuum_limit 
 export get_knots
 export cell_numbers, leading_edges

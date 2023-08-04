@@ -276,6 +276,9 @@ end
     # Test the statistics when restricting to a specific set of simulation indices
     _indices = rand(eachindex(sol), 20)
     q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices)
+    res = node_densities_means_only(sol; indices=_indices)
+    @test res.means == means
+    @test res.knots == knots
     @inferred node_densities(sol; indices=_indices)
     N, N_means, N_lowers, N_uppers = cell_numbers(sol; indices=_indices)
     @inferred cell_numbers(sol; indices=_indices)
