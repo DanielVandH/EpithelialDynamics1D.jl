@@ -258,8 +258,8 @@ function node_densities_means_only(sol::EnsembleSolution;
     interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
     smooth_boundary=true,
     extrapolate=false)
-    means = [zeros(num_knots) for _ in 1:nt]
     nt = length(first(sol))
+    means = [zeros(num_knots) for _ in 1:nt]
     for k in indices
         for j in 1:nt
             knot_range = knots[j]
