@@ -263,7 +263,7 @@ function node_densities_means_only(sol::EnsembleSolution;
     for k in indices
         for j in 1:nt
             knot_range = knots[j]
-            densities = node_densities(sol[k].u; smooth_boundary)
+            densities = node_densities(sol[k].u[j]; smooth_boundary)
             cell_positions = sol[k].u[j]
             interp = interp_fnc(densities, cell_positions)
             for i in eachindex(knot_range)
