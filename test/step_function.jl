@@ -316,7 +316,7 @@ end
     # Test the statistics with a specific interpolation function 
     _indices = eachindex(sol)
     q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, interp_fnc=CubicSpline)
-    @inferred node_densities(sol; indices=_indices, interp_fnc=CubicSpline)
+    @inferred node_densities(sol; indices=_indices, interp_fnc=CubicSpline, parallel=true)
     @test all(≈(LinRange(0, 30, 500)), knots)
     for (enum_k, k) in enumerate(_indices)
         for j in rand(1:length(sol[k]), 40)
@@ -543,7 +543,7 @@ end
 
     # Test the statistics with a specific interpolation function 
     _indices = rand(eachindex(sol), 20)
-    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, interp_fnc=CubicSpline, stat = minimum)
+    q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, interp_fnc=CubicSpline, stat=minimum)
     @inferred node_densities(sol; indices=_indices, interp_fnc=CubicSpline)
     for j in eachindex(knots)
         a = Inf
@@ -583,7 +583,7 @@ end
     _L = _L[:, _indices]
     _mL = mean.(eachrow(_L))
     q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, stat=mean)
-    @inferred node_densities(sol; indices=_indices, stat=mean)
+    @inferred node_densities(sol; indices=_indices, stat=mean, parallel=true)
     for j in eachindex(knots)
         a = mean(sol[k][j][begin] for k in _indices)
         b = mean(sol[k][j][end] for k in _indices)
@@ -621,7 +621,7 @@ end
     _L = _L[:, _indices]
     _mL = mean.(eachrow(_L))
     q, r, means, lowers, uppers, knots = node_densities(sol; indices=_indices, stat=mean, extrapolate=true)
-    @inferred node_densities(sol; indices=_indices, stat=mean,extrapolate=true)
+    @inferred node_densities(sol; indices=_indices, stat=mean, extrapolate=true, parallel=true)
     for j in eachindex(knots)
         a = mean(sol[k][j][begin] for k in _indices)
         b = mean(sol[k][j][end] for k in _indices)
@@ -645,7 +645,7 @@ end
     end
     for j in rand(eachindex(mb_sol), 40)
         for i in eachindex(knots[j])
-            all_q = max.(0.0, [LinearInterpolation(q[k][j], r[k][j])(knots[j][i])  for k in eachindex(_indices)])
+            all_q = max.(0.0, [LinearInterpolation(q[k][j], r[k][j])(knots[j][i]) for k in eachindex(_indices)])
             @test mean(all_q) ≈ means[j][i] rtol = 1e-3
             @test quantile(all_q, 0.025) ≈ lowers[j][i] rtol = 1e-3
             @test quantile(all_q, 0.975) ≈ uppers[j][i] rtol = 1e-3

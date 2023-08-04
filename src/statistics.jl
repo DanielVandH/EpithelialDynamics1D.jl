@@ -79,7 +79,7 @@ function node_densities(cell_positions::AbstractVector{T}; smooth_boundary=true)
 end
 
 """
-    get_knots(sol, num_knots = 500; indices = eachindex(sol), stat=maximum)
+    get_knots(sol, num_knots = 500; indices = eachindex(sol), stat=maximum, parallel=false)
 
 Computes knots for each time, covering the extremum of the cell positions across all 
 cell simulations. You can restrict the simultaions to consider using the `indices`.
@@ -88,7 +88,7 @@ to the vector of extrema at each time. For example, if `stat=maximum` then, at e
 the knots range between the smallest position observed and the maximum position 
 observed across each simulation at that time.
 """
-function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol), stat=(minimum, maximum))
+function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol), stat=(minimum, maximum), parallel=false)
     if stat isa Function
         stat = (stat, stat)
     end
@@ -98,15 +98,27 @@ function get_knots(sol::EnsembleSolution, num_knots=500; indices=eachindex(sol),
         knots = Vector{LinRange{Float64,Int}}(undef, length(first(sol)))
     end
     times = first(sol).t
-    Base.Threads.@threads for i in eachindex(times)
-        local a, b
-        a = zeros(length(indices))
-        b = zeros(length(indices))
-        for (ℓ, j) in enumerate(indices)
-            a[ℓ] = sol[j].u[i][begin]
-            b[ℓ] = sol[j].u[i][end]
+    if parallel
+        Base.Threads.@threads for i in eachindex(times)
+            local a, b
+            a = zeros(length(indices))
+            b = zeros(length(indices))
+            for (ℓ, j) in enumerate(indices)
+                a[ℓ] = sol[j].u[i][begin]
+                b[ℓ] = sol[j].u[i][end]
+            end
+            knots[i] = LinRange(stat[1](a), stat[2](b), num_knots)
         end
-        knots[i] = LinRange(stat[1](a), stat[2](b), num_knots)
+    else
+        for i in eachindex(times)
+            a = zeros(length(indices))
+            b = zeros(length(indices))
+            for (ℓ, j) in enumerate(indices)
+                a[ℓ] = sol[j].u[i][begin]
+                b[ℓ] = sol[j].u[i][end]
+            end
+            knots[i] = LinRange(stat[1](a), stat[2](b), num_knots)
+        end
     end
     return knots
 end
@@ -137,7 +149,8 @@ negative values are set to zero.
 - `indices = eachindex(sol)`: The indices of the cell simulations to consider. 
 - `num_knots::Int = 500`: The number of knots to use for the spline interpolation.
 - `stat = (minimum, maximum)`: How to summarise the knots for `get_knots`.
-- `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots; indices, stat)`: The knots to use for the spline interpolation.
+- `parallel = false`: Whether to use multithreading for the loops.
+- `knots::Vector{Vector{Float64}} = get_knots(sol, num_knots; indices, stat, parallel)`: The knots to use for the spline interpolation.
 - `alpha::Float64 = 0.05`: The significance level for the confidence intervals.
 - `interp_fnc = (u, t) -> LinearInterpolation{true}(u, t)`: The function to use for constructing the interpolant.
 - `smooth_boundary::Bool = true`: Whether to use the smooth boundary node densities.
@@ -155,6 +168,7 @@ function node_densities(sol::EnsembleSolution;
     indices=eachindex(sol),
     num_knots=500,
     stat=(minimum, maximum),
+    parallel=false,
     knots=get_knots(sol, num_knots; indices, stat),
     alpha=0.05,
     interp_fnc=(u, t) -> LinearInterpolation{true}(u, t),
@@ -162,9 +176,16 @@ function node_densities(sol::EnsembleSolution;
     extrapolate=false)
     q = Vector{Vector{Vector{Float64}}}(undef, length(indices))
     r = Vector{Vector{Vector{Float64}}}(undef, length(indices))
-    Base.Threads.@threads for i in eachindex(indices)
-        q[i] = node_densities.(sol[indices[i]].u; smooth_boundary)
-        r[i] = sol[indices[i]].u
+    if parallel
+        Base.Threads.@threads for i in eachindex(indices)
+            q[i] = node_densities.(sol[indices[i]].u; smooth_boundary)
+            r[i] = sol[indices[i]].u
+        end
+    else
+        for i in eachindex(indices)
+            q[i] = node_densities.(sol[indices[i]].u; smooth_boundary)
+            r[i] = sol[indices[i]].u
+        end
     end
     nt = length(first(sol))
     nsims = length(indices)
@@ -172,27 +193,56 @@ function node_densities(sol::EnsembleSolution;
     q_means = [zeros(num_knots) for _ in 1:nt]
     q_lowers = [zeros(num_knots) for _ in 1:nt]
     q_uppers = [zeros(num_knots) for _ in 1:nt]
-    Base.Threads.@threads for k in 1:nsims
-        for j in 1:nt
-            densities = q[k][j]
-            cell_positions = r[k][j]
-            interp = interp_fnc(densities, cell_positions)
-            for i in eachindex(knots[j])
-                if !extrapolate && knots[j][i] > r[k][j][end] 
-                    q_splines[i, j, k] = 0.0
-                else
-                    q_splines[i, j, k] = max(0.0, interp(knots[j][i]))
+    if parallel
+        Base.Threads.@threads for k in 1:nsims
+            for j in 1:nt
+                densities = q[k][j]
+                cell_positions = r[k][j]
+                interp = interp_fnc(densities, cell_positions)
+                for i in eachindex(knots[j])
+                    if !extrapolate && knots[j][i] > r[k][j][end]
+                        q_splines[i, j, k] = 0.0
+                    else
+                        q_splines[i, j, k] = max(0.0, interp(knots[j][i]))
+                    end
+                end
+            end
+        end
+    else
+        for k in 1:nsims
+            for j in 1:nt
+                densities = q[k][j]
+                cell_positions = r[k][j]
+                interp = interp_fnc(densities, cell_positions)
+                for i in eachindex(knots[j])
+                    if !extrapolate && knots[j][i] > r[k][j][end]
+                        q_splines[i, j, k] = 0.0
+                    else
+                        q_splines[i, j, k] = max(0.0, interp(knots[j][i]))
+                    end
                 end
             end
         end
     end
-    Base.Threads.@threads for j in 1:nt
-        knot_range = knots[j]
-        for i in eachindex(knot_range)
-            q_values = @views q_splines[i, j, :]
-            q_means[j][i] = mean(q_values)
-            q_lowers[j][i] = quantile(q_values, alpha / 2)
-            q_uppers[j][i] = quantile(q_values, 1 - alpha / 2)
+    if parallel
+        Base.Threads.@threads for j in 1:nt
+            knot_range = knots[j]
+            for i in eachindex(knot_range)
+                q_values = @views q_splines[i, j, :]
+                q_means[j][i] = mean(q_values)
+                q_lowers[j][i] = quantile(q_values, alpha / 2)
+                q_uppers[j][i] = quantile(q_values, 1 - alpha / 2)
+            end
+        end
+    else
+        for j in 1:nt
+            knot_range = knots[j]
+            for i in eachindex(knot_range)
+                q_values = @views q_splines[i, j, :]
+                q_means[j][i] = mean(q_values)
+                q_lowers[j][i] = quantile(q_values, alpha / 2)
+                q_uppers[j][i] = quantile(q_values, 1 - alpha / 2)
+            end
         end
     end
     return (q=q, r=r, means=q_means, lowers=q_lowers, uppers=q_uppers, knots=knots)
