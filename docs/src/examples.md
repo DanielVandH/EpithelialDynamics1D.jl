@@ -29,7 +29,7 @@ fig
 </figure>
 ```
 
-When considering cell migration, the force law we use is the linear law $F(\delta) = k(s - \delta)$, where $k = 10$ is the spring constant in each example, and $s = 0.2$ is the resting spring length except in the last example where $s=1$. When including proliferation, we use the logistic law $G(\delta) = \max\{0, \beta K[1 - 1/(K\delta)]\}$, where $\beta = 0.01$ is the intrinsic proliferation rate and $K=15$ is the cell carrying capacity density. This choice of proliferation law slows down the growth of a cell population when there are many cells packed together, ensuring that a steady state can be reached (when there is no moving boundary). (To see that this is a logistic law, note that in the continuum limit the corresponding reaction term is $qG(1/q) = \max\{0, \beta K q[1 - q/K]\}$, which is basically the same term in the Fisher equation.)
+When considering cell migration, the force law we use is the linear law $F(\delta) = k(s - \delta)$, where $k = 10$ is the spring constant in each example, and $s = 0.2$ is the resting spring length except in the last example where $s=1$. When including proliferation, we use the logistic law $G(\delta) = \beta[1 - 1/(K\delta)]$, where $\beta = 0.15$ is the intrinsic proliferation rate and $K=15$ is the cell carrying capacity density. This choice of proliferation law slows down the growth of a cell population when there are many cells packed together, ensuring that a steady state can be reached (when there is no moving boundary). (To see that this is a logistic law, note that in the continuum limit the corresponding reaction term is $qG(1/q) = \beta q[1 - q/K]$, which is the same term in the Fisher equation.)
 
 ## Example I: Fixed boundaries, no proliferation
 
@@ -275,7 +275,7 @@ We see that the cells all have lengths approximately equal to $s$, and  $\lim_{t
 
 ## Example III: Fixed boundary, with proliferation
 
-Now let us go back to the fixed boundary problem, but now include proliferation. Remember that the proliferation law we use is the logistic law $G(\delta) = \max\{0, \beta K[1 - 1/(K\delta)]\}$.
+Now let us go back to the fixed boundary problem, but now include proliferation. Remember that the proliferation law we use is the logistic law $G(\delta) = \beta[1 - 1/(K\delta)]$.
 
 The procedure for solving problems with proliferation is different than without. Since the proliferation mechanism is stochastic, we need to simulate the system many times to capture the average behaviour. We use the ensemble solution features from DifferentialEquations.jl to do this, using the `trajectories` keyword to specify how many simulations of the systems we want.
 
@@ -284,8 +284,8 @@ using EpithelialDynamics1D, OrdinaryDiffEq
 
 force_law = (δ, p) -> p.k * (p.s - δ)
 force_law_parameters = (k=10.0, s=0.2)
-proliferation_law = (δ, p) -> max(zero(δ), p.β * p.K * (one(δ) -inv(p.K * δ)))
-proliferation_law_parameters = (β=1e-2, K=15.0)
+proliferation_law = (δ, p) -> p.β * (one(δ) - inv(p.K * δ))
+proliferation_law_parameters = (β=0.15, K=15.0)
 proliferation_period = 1e-2
 final_time = 50.0
 damping_constant = 1.0
@@ -326,8 +326,8 @@ We provide several functions for computing statistics from the `EnsembleSolution
 2. `r`: This is a vector-of-vector-of-vectors, where `r[k][j][i]` is the position of the `i`th node from the `j`th timepoint of the `k`th simulation.
 3. `knots`: To summarise the behaviour of the system at each time, we define a grid of knots at each time (defaults to 500 knots for each time). These knots are used to evaluate the piecewise linear interpolant of the densities at each time for each simulation, allowing us to summarise the densities at common knots for each time. With this property, `knots[j]` is the set of knots used for the `j`th time, `where knots[j][begin]` is the minimum of all cell positions from each simulation at the `j`th time, and `knots[j][end]` is the corresponding maximum. In this case, the minimum and maximum for each time are just $0$ and $30$, respectively.
 4. `means`: This is a vector-of-vectors, where `means[j]` is a vector of average densities at each knot in `knots[j]`.
-4. `lowers`: This is a vector-of-vectors, where `lowers[j]` are the lower limits of the confidence intervals for the densities at each knot in `knots[j]`. The significance level of this confidence interval is $\alpha=0.05$ by default, meaning these are $(100\alpha/2)\% = 2.5\%$ quantiles.
-5. `uppers`: Similar to `lowers`, except these are the upper limits of the corresponding confidence intervals, i.e. the $100(1-\alpha/2)\% = 97.5\%$ 
+5. `lowers`: This is a vector-of-vectors, where `lowers[j]` are the lower limits of the confidence intervals for the densities at each knot in `knots[j]`. The significance level of this confidence interval is $\alpha=0.05$ by default, meaning these are $(100\alpha/2)\% = 2.5\%$ quantiles.
+6. `uppers`: Similar to `lowers`, except these are the upper limits of the corresponding confidence intervals, i.e. the $100(1-\alpha/2)\% = 97.5\%$ 
 
 Another function that we provide is `cell_numbers`, used for obtaining cell numbers at each time and summarising for each simulation. The returned result is a `NamedTuple` with the following properties:
 
@@ -387,8 +387,8 @@ Now let us consider proliferation with a moving boundary.
 using EpithelialDynamics1D, OrdinaryDiffEq
 force_law = (δ, p) -> p.k * (p.s - δ)
 force_law_parameters = (k=10.0, s=1)
-proliferation_law = (δ, p) -> max(zero(δ), p.β * p.K *(one(δ) - inv(p.K * δ)))
-proliferation_law_parameters = (β=1e-2, K=15.0)
+proliferation_law = (δ, p) -> p.β *(one(δ) - inv(p.K * δ))
+proliferation_law_parameters = (β=0.15, K=15.0)
 proliferation_period = 1e-2
 final_time = 30.0
 damping_constant = 1.0
