@@ -6,6 +6,7 @@ function build_proliferation_vec!(prob, Gvec::AbstractVector{T}, nodes) where {T
     Gp = prob.proliferation_law_parameters
     for i in eachindex(Gvec) # Gvec is (n-1)×1, nodes is n×1
         Gᵢ = Glaw(nodes[i+1] - nodes[i], Gp)
+        Gᵢ = max(Gᵢ, zero(Gᵢ))
         E += Gᵢ * Δt
         Gtot += Gᵢ
         Gvec[i] = Gtot

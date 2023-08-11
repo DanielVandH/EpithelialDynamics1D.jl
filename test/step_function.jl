@@ -173,8 +173,8 @@ end
     println("Starting Proliferation with a Fixed Boundary example.")
     force_law = (δ, p) -> p.k * (p.s - δ)
     force_law_parameters = (k=10.0, s=0.2)
-    proliferation_law = (δ, p) -> max(zero(δ), p.β * p.K * (one(δ) - inv(p.K * δ)))
-    proliferation_law_parameters = (β=1e-2, K=15.0)
+    proliferation_law = (δ, p) -> p.β * (one(δ) - inv(p.K * δ))
+    proliferation_law_parameters = (β=0.15, K=15.0)
     proliferation_period = 1e-2
     final_time = 50.0
     damping_constant = 1.0
@@ -379,8 +379,8 @@ end
     println("Starting Proliferation with a Moving Boundary example.")
     force_law = (δ, p) -> p.k * (p.s - δ)
     force_law_parameters = (k=10.0, s=1)
-    proliferation_law = (δ, p) -> max(zero(δ), p.β * p.K * (one(δ) - inv(p.K * δ)))
-    proliferation_law_parameters = (β=1e-2, K=15.0)
+    proliferation_law = (δ, p) -> p.β * (one(δ) - inv(p.K * δ))
+    proliferation_law_parameters = (β=0.15, K=15.0)
     proliferation_period = 1e-2
     final_time = 50.0
     damping_constant = 1.0
