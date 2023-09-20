@@ -419,9 +419,7 @@ As in Example III, we can compute statistics from our ensemble solutions, as wel
 
 ```julia
 (; q, r, means, lowers, uppers, knots) =node_densities(sol)
-@inferred node_densities(sol)
 N, N_means, N_lowers, N_uppers = cell_numbers(sol)
-@inferred cell_numbers(sol)
 L, L_means, L_lowers, L_uppers = leading_edge(sol)
 pde_N = map(eachindex(mb_sol)) do i
     integrate_pde(mb_sol, i)
